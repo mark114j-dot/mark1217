@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          is_system: boolean
+          player_name: string
+          room_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          is_system?: boolean
+          player_name: string
+          room_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          is_system?: boolean
+          player_name?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          client_id: string
+          color: string
+          guessed_correctly: boolean
+          id: string
+          joined_at: string
+          name: string
+          room_id: string
+          score: number
+        }
+        Insert: {
+          client_id: string
+          color?: string
+          guessed_correctly?: boolean
+          id?: string
+          joined_at?: string
+          name: string
+          room_id: string
+          score?: number
+        }
+        Update: {
+          client_id?: string
+          color?: string
+          guessed_correctly?: boolean
+          id?: string
+          joined_at?: string
+          name?: string
+          room_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          current_drawer_id: string | null
+          current_word: string | null
+          host_client_id: string
+          id: string
+          max_rounds: number
+          round: number
+          round_ends_at: string | null
+          status: string
+          word_hint: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_drawer_id?: string | null
+          current_word?: string | null
+          host_client_id: string
+          id?: string
+          max_rounds?: number
+          round?: number
+          round_ends_at?: string | null
+          status?: string
+          word_hint?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_drawer_id?: string | null
+          current_word?: string | null
+          host_client_id?: string
+          id?: string
+          max_rounds?: number
+          round?: number
+          round_ends_at?: string | null
+          status?: string
+          word_hint?: string | null
+        }
+        Relationships: []
+      }
+      strokes: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          room_id: string
+          round: number
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          room_id: string
+          round?: number
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          room_id?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strokes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
