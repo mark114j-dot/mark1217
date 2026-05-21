@@ -1,0 +1,491 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  getClientId,
+  getSavedName,
+  makeHint,
+  pickColor,
+  pickWords,
+  ROUND_SECONDS,
+} from "@/lib/game";
+import { DrawingCanvas } from "@/components/game/DrawingCanvas";
+import { ChatPanel } from "@/components/game/ChatPanel";
+import { PlayersPanel, type Player } from "@/components/game/PlayersPanel";
+import { Copy, LogOut, Sparkles, Trophy } from "lucide-react";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/room/$code")({
+  component: RoomPage,
+  head: ({ params }) => ({
+    meta: [{ title: `房間 ${params.code} · 畫聊` }],
+  }),
+});
+
+type Room = {
+  id: string;
+  code: string;
+  status: "waiting" | "picking" | "drawing" | "round_end" | "finished";
+  round: number;
+  max_rounds: number;
+  current_drawer_id: string | null;
+  current_word: string | null;
+  word_hint: string | null;
+  round_ends_at: string | null;
+  host_client_id: string;
+};
+
+function RoomPage() {
+  const { code } = Route.useParams();
+  const navigate = useNavigate();
+  const [room, setRoom] = useState<Room | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [me, setMe] = useState<Player | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const meClientId = useMemo(() => (typeof window === "undefined" ? "" : getClientId()), []);
+  const myName = useMemo(() => (typeof window === "undefined" ? "" : getSavedName()), []);
+  const joinedRef = useRef(false);
+
+  // Redirect if no name
+  useEffect(() => {
+    if (typeof window !== "undefined" && !getSavedName()) {
+      navigate({ to: "/" });
+    }
+  }, [navigate]);
+
+  // Tick
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
+
+  // Load room + subscribe
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data, error } = await supabase.from("rooms").select("*").eq("code", code).maybeSingle();
+      if (!active) return;
+      if (error || !data) {
+        toast.error("房間不存在");
+        navigate({ to: "/" });
+        return;
+      }
+      setRoom(data as Room);
+
+      // Join as player (upsert)
+      if (!joinedRef.current && myName) {
+        joinedRef.current = true;
+        await supabase.from("players").upsert(
+          {
+            room_id: data.id,
+            client_id: meClientId,
+            name: myName,
+            color: pickColor(meClientId),
+          },
+          { onConflict: "room_id,client_id" },
+        );
+        await supabase.from("messages").insert({
+          room_id: data.id,
+          player_name: "系統",
+          content: `${myName} 加入房間`,
+          is_system: true,
+        });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [code, navigate, meClientId, myName]);
+
+  // Subscribe to room updates
+  useEffect(() => {
+    if (!room?.id) return;
+    const ch = supabase
+      .channel(`room:${room.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${room.id}` },
+        (payload) => setRoom(payload.new as Room),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [room?.id]);
+
+  // Subscribe to players
+  useEffect(() => {
+    if (!room?.id) return;
+    const load = async () => {
+      const { data } = await supabase.from("players").select("*").eq("room_id", room.id);
+      if (data) setPlayers(data as Player[]);
+    };
+    load();
+    const ch = supabase
+      .channel(`players:${room.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "players", filter: `room_id=eq.${room.id}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [room?.id]);
+
+  // Track me
+  useEffect(() => {
+    setMe(players.find((p) => p.client_id === meClientId) ?? null);
+  }, [players, meClientId]);
+
+  // Leave on unload
+  useEffect(() => {
+    const leave = () => {
+      if (room?.id && me?.id) {
+        navigator.sendBeacon?.(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/players?id=eq.${me.id}`,
+        );
+      }
+    };
+    window.addEventListener("beforeunload", leave);
+    return () => window.removeEventListener("beforeunload", leave);
+  }, [room?.id, me?.id]);
+
+  const isHost = room?.host_client_id === meClientId;
+  const isDrawer = me != null && room?.current_drawer_id === me.id;
+  const timeLeft =
+    room?.round_ends_at && room.status === "drawing"
+      ? Math.max(0, Math.ceil((new Date(room.round_ends_at).getTime() - now) / 1000))
+      : 0;
+
+  const startNextRound = useCallback(async () => {
+    if (!room || !isHost) return;
+    if (players.length < 2) {
+      toast.error("至少需要 2 位玩家才能開始！");
+      return;
+    }
+    // pick next drawer: rotate by joined_at, skipping current
+    const ordered = [...players].sort((a, b) => a.id.localeCompare(b.id));
+    let nextIdx = 0;
+    if (room.current_drawer_id) {
+      const cur = ordered.findIndex((p) => p.id === room.current_drawer_id);
+      nextIdx = (cur + 1) % ordered.length;
+    }
+    const next = ordered[nextIdx];
+    await supabase.from("strokes").delete().eq("room_id", room.id);
+    await supabase
+      .from("players")
+      .update({ guessed_correctly: false })
+      .eq("room_id", room.id);
+    await supabase
+      .from("rooms")
+      .update({
+        status: "picking",
+        current_drawer_id: next.id,
+        current_word: null,
+        word_hint: null,
+        round_ends_at: null,
+        round: (room.round ?? 0) + 1,
+      })
+      .eq("id", room.id);
+  }, [room, isHost, players]);
+
+  const finishGame = useCallback(async () => {
+    if (!room || !isHost) return;
+    await supabase.from("rooms").update({ status: "finished" }).eq("id", room.id);
+  }, [room, isHost]);
+
+  const resetGame = useCallback(async () => {
+    if (!room || !isHost) return;
+    await supabase.from("strokes").delete().eq("room_id", room.id);
+    await supabase
+      .from("players")
+      .update({ score: 0, guessed_correctly: false })
+      .eq("room_id", room.id);
+    await supabase
+      .from("rooms")
+      .update({
+        status: "waiting",
+        round: 0,
+        current_drawer_id: null,
+        current_word: null,
+        word_hint: null,
+        round_ends_at: null,
+      })
+      .eq("id", room.id);
+  }, [room, isHost]);
+
+  // Word picker options (drawer only, when picking)
+  const [wordOptions, setWordOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (room?.status === "picking" && isDrawer && !room.current_word) {
+      setWordOptions(pickWords(3));
+    }
+  }, [room?.status, isDrawer, room?.current_word]);
+
+  async function chooseWord(w: string) {
+    if (!room) return;
+    const endsAt = new Date(Date.now() + ROUND_SECONDS * 1000).toISOString();
+    await supabase
+      .from("rooms")
+      .update({
+        status: "drawing",
+        current_word: w,
+        word_hint: makeHint(w),
+        round_ends_at: endsAt,
+      })
+      .eq("id", room.id);
+  }
+
+  // End-of-round detection (host only)
+  useEffect(() => {
+    if (!room || !isHost || room.status !== "drawing") return;
+    const nonDrawerCount = players.filter((p) => p.id !== room.current_drawer_id).length;
+    const guessedCount = players.filter(
+      (p) => p.id !== room.current_drawer_id && p.guessed_correctly,
+    ).length;
+    const allGuessed = nonDrawerCount > 0 && guessedCount >= nonDrawerCount;
+    const timeUp = timeLeft <= 0;
+    if (allGuessed || timeUp) {
+      (async () => {
+        // award drawer
+        const drawer = players.find((p) => p.id === room.current_drawer_id);
+        if (drawer && guessedCount > 0) {
+          await supabase
+            .from("players")
+            .update({ score: drawer.score + guessedCount * 30 })
+            .eq("id", drawer.id);
+        }
+        await supabase.from("messages").insert({
+          room_id: room.id,
+          player_name: "系統",
+          content: `本回合答案：${room.current_word}`,
+          is_system: true,
+        });
+        await supabase.from("rooms").update({ status: "round_end" }).eq("id", room.id);
+      })();
+    }
+  }, [room, isHost, players, timeLeft]);
+
+  async function onCorrectGuess() {
+    if (!me || !room) return;
+    const earned = 50 + Math.round((timeLeft / ROUND_SECONDS) * 50);
+    await supabase
+      .from("players")
+      .update({ guessed_correctly: true, score: me.score + earned })
+      .eq("id", me.id);
+    toast.success(`+${earned} 分！`);
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(code);
+    toast.success("已複製房間代碼");
+  }
+
+  if (!room) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        載入中…
+      </div>
+    );
+  }
+
+  const drawer = players.find((p) => p.id === room.current_drawer_id);
+  const reachedEnd = room.round >= room.max_rounds && room.status === "round_end";
+
+  return (
+    <main className="min-h-screen p-3 md:p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <button
+          onClick={() => navigate({ to: "/" })}
+          className="border-brutal shadow-brutal-sm rounded-xl bg-card px-3 py-2 text-sm font-semibold flex items-center gap-1.5 hover:translate-y-0.5 hover:shadow-none transition"
+        >
+          <LogOut className="w-4 h-4" /> 離開
+        </button>
+        <button
+          onClick={copyCode}
+          className="border-brutal shadow-brutal-sm rounded-xl bg-secondary px-4 py-2 font-mono font-bold tracking-widest flex items-center gap-2 hover:translate-y-0.5 hover:shadow-none transition"
+        >
+          {code} <Copy className="w-3.5 h-3.5" />
+        </button>
+        <div className="text-sm text-muted-foreground">
+          回合 <span className="font-bold text-foreground">{Math.min(room.round, room.max_rounds)}</span> / {room.max_rounds}
+        </div>
+        {room.status === "drawing" && (
+          <div
+            className={`ml-auto px-4 py-2 rounded-xl border-brutal shadow-brutal-sm font-display font-bold tabular-nums ${
+              timeLeft <= 10 ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-accent text-accent-foreground"
+            }`}
+          >
+            ⏱ {timeLeft}s
+          </div>
+        )}
+      </div>
+
+      {/* Word bar */}
+      <div className="mb-4 bg-card border-brutal shadow-brutal rounded-2xl px-5 py-3 text-center">
+        {room.status === "drawing" && drawer && (
+          <>
+            <div className="text-xs text-muted-foreground mb-0.5">
+              {isDrawer ? "你的題目（請畫出來）" : `${drawer.name} 正在畫…`}
+            </div>
+            <div className="font-display font-bold text-2xl tracking-[0.3em]">
+              {isDrawer ? room.current_word : room.word_hint}
+            </div>
+          </>
+        )}
+        {room.status === "waiting" && (
+          <div className="font-display text-lg">
+            等待房主開始遊戲 · 把代碼 <span className="font-mono font-bold">{code}</span> 分享給朋友！
+          </div>
+        )}
+        {room.status === "picking" && (
+          <div className="text-muted-foreground">
+            {isDrawer ? "請選擇一個題目…" : `${drawer?.name ?? "玩家"} 正在選題…`}
+          </div>
+        )}
+        {room.status === "round_end" && (
+          <div className="font-display text-xl">
+            🎉 答案是 <span className="text-primary font-bold">{room.current_word}</span>
+          </div>
+        )}
+        {room.status === "finished" && (
+          <div className="font-display text-xl flex items-center justify-center gap-2">
+            <Trophy className="w-6 h-6 text-secondary-foreground" /> 遊戲結束！
+          </div>
+        )}
+      </div>
+
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="space-y-4">
+          <DrawingCanvas roomId={room.id} round={room.round} canDraw={isDrawer && room.status === "drawing"} />
+
+          {/* Host / round controls */}
+          {isHost && (room.status === "waiting" || room.status === "round_end") && !reachedEnd && (
+            <button
+              onClick={startNextRound}
+              className="w-full border-brutal shadow-brutal rounded-2xl bg-primary text-primary-foreground font-display font-bold text-lg py-3 hover:translate-y-0.5 hover:shadow-none transition flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-5 h-5" /> {room.status === "waiting" ? "開始遊戲" : "下一回合"}
+            </button>
+          )}
+          {isHost && reachedEnd && (
+            <div className="flex gap-2">
+              <button
+                onClick={finishGame}
+                className="flex-1 border-brutal shadow-brutal rounded-2xl bg-secondary font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
+              >
+                <Trophy className="w-5 h-5 inline mr-1" /> 結算
+              </button>
+            </div>
+          )}
+          {isHost && room.status === "finished" && (
+            <button
+              onClick={resetGame}
+              className="w-full border-brutal shadow-brutal rounded-2xl bg-accent font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
+            >
+              再玩一局
+            </button>
+          )}
+          {!isHost && (room.status === "waiting" || room.status === "round_end") && (
+            <div className="text-center text-sm text-muted-foreground">
+              等待房主開始下一回合…
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4 flex flex-col">
+          <PlayersPanel
+            players={players}
+            hostClientId={room.host_client_id}
+            drawerId={room.current_drawer_id}
+            meClientId={meClientId}
+          />
+          <div className="flex-1 min-h-[320px] lg:min-h-0 lg:h-[480px]">
+            <ChatPanel
+              roomId={room.id}
+              playerName={myName}
+              currentWord={room.status === "drawing" ? room.current_word : null}
+              isDrawer={isDrawer}
+              hasGuessed={me?.guessed_correctly ?? false}
+              onCorrectGuess={onCorrectGuess}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Word picker modal */}
+      <AnimatePresence>
+        {room.status === "picking" && isDrawer && !room.current_word && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-card border-brutal shadow-brutal rounded-3xl p-6 max-w-md w-full"
+            >
+              <h2 className="font-display font-bold text-2xl mb-1">挑一個題目來畫</h2>
+              <p className="text-sm text-muted-foreground mb-5">其他玩家看不到答案</p>
+              <div className="grid gap-3">
+                {wordOptions.map((w) => (
+                  <button
+                    key={w}
+                    onClick={() => chooseWord(w)}
+                    className="border-brutal shadow-brutal-sm rounded-xl bg-secondary font-display font-bold text-xl py-4 hover:translate-y-0.5 hover:shadow-none hover:bg-primary hover:text-primary-foreground transition"
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Finished modal */}
+      <AnimatePresence>
+        {room.status === "finished" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-card border-brutal shadow-brutal rounded-3xl p-6 max-w-md w-full"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-7 h-7 text-secondary-foreground" />
+                <h2 className="font-display font-bold text-2xl">最終結果</h2>
+              </div>
+              <ol className="space-y-2">
+                {[...players].sort((a, b) => b.score - a.score).map((p, i) => (
+                  <li
+                    key={p.id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 ${
+                      i === 0 ? "border-foreground bg-secondary" : "border-foreground/20 bg-background"
+                    }`}
+                  >
+                    <span className="font-display font-bold text-xl w-6">{i + 1}</span>
+                    <span className="flex-1 font-semibold">{p.name}</span>
+                    <span className="font-mono font-bold text-lg">{p.score}</span>
+                  </li>
+                ))}
+              </ol>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}
