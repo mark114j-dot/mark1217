@@ -161,6 +161,15 @@ function RoomPage() {
     room?.round_ends_at && room.status === "drawing"
       ? Math.max(0, Math.ceil((new Date(room.round_ends_at).getTime() - now) / 1000))
       : 0;
+  const isInfinite = (room?.max_rounds ?? 0) >= 9999;
+
+  const setMaxRounds = useCallback(
+    async (n: number) => {
+      if (!room || !isHost) return;
+      await supabase.from("rooms").update({ max_rounds: n }).eq("id", room.id);
+    },
+    [room, isHost],
+  );
 
   const startNextRound = useCallback(async () => {
     if (!room || !isHost) return;
@@ -308,7 +317,8 @@ function RoomPage() {
   }
 
   const drawer = players.find((p) => p.id === room.current_drawer_id);
-  const reachedEnd = room.round >= room.max_rounds && room.status === "round_end";
+  const reachedEnd =
+    !isInfinite && room.round >= room.max_rounds && room.status === "round_end";
 
   return (
     <main className="min-h-screen p-3 md:p-6 max-w-7xl mx-auto">
@@ -327,7 +337,7 @@ function RoomPage() {
           {code} <Copy className="w-3.5 h-3.5" />
         </button>
         <div className="text-sm text-muted-foreground">
-          回合 <span className="font-bold text-foreground">{Math.min(room.round, room.max_rounds)}</span> / {room.max_rounds}
+          回合 <span className="font-bold text-foreground">{isInfinite ? room.round : Math.min(room.round, room.max_rounds)}</span> / {isInfinite ? "∞" : room.max_rounds}
         </div>
         {room.status === "drawing" && (
           <div
