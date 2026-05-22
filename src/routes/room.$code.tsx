@@ -6,6 +6,7 @@ import {
   CATEGORIES,
   type CategoryId,
   getClientId,
+  getSavedAvatar,
   getSavedName,
   makeHint,
   pickColor,
@@ -47,7 +48,9 @@ function RoomPage() {
   const [now, setNow] = useState(() => Date.now());
   const meClientId = useMemo(() => (typeof window === "undefined" ? "" : getClientId()), []);
   const myName = useMemo(() => (typeof window === "undefined" ? "" : getSavedName()), []);
+  const myAvatar = useMemo(() => (typeof window === "undefined" ? "🐱" : getSavedAvatar()), []);
   const joinedRef = useRef(false);
+  const [joining, setJoining] = useState(true);
 
   // Redirect if no name
   useEffect(() => {
@@ -84,21 +87,25 @@ function RoomPage() {
             client_id: meClientId,
             name: myName,
             color: pickColor(meClientId),
+            avatar: myAvatar,
           },
           { onConflict: "room_id,client_id" },
         );
         await supabase.from("messages").insert({
           room_id: data.id,
           player_name: "系統",
-          content: `${myName} 加入房間`,
+          content: `${myAvatar} ${myName} 加入房間`,
           is_system: true,
         });
+        setJoining(false);
+      } else {
+        setJoining(false);
       }
     })();
     return () => {
       active = false;
     };
-  }, [code, navigate, meClientId, myName]);
+  }, [code, navigate, meClientId, myName, myAvatar]);
 
   // Subscribe to room updates
   useEffect(() => {
@@ -308,12 +315,8 @@ function RoomPage() {
     toast.success("已複製房間代碼");
   }
 
-  if (!room) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        載入中…
-      </div>
-    );
+  if (!room || joining || players.length === 0) {
+    return <JoiningScreen code={code} />;
   }
 
   const drawer = players.find((p) => p.id === room.current_drawer_id);
