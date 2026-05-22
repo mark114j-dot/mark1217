@@ -54,6 +54,7 @@ export type Database = {
       }
       players: {
         Row: {
+          avatar: string
           client_id: string
           color: string
           guessed_correctly: boolean
@@ -64,6 +65,7 @@ export type Database = {
           score: number
         }
         Insert: {
+          avatar?: string
           client_id: string
           color?: string
           guessed_correctly?: boolean
@@ -74,6 +76,7 @@ export type Database = {
           score?: number
         }
         Update: {
+          avatar?: string
           client_id?: string
           color?: string
           guessed_correctly?: boolean
