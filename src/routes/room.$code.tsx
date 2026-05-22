@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  CATEGORIES,
+  type CategoryId,
   getClientId,
   getSavedName,
   makeHint,
@@ -13,7 +15,7 @@ import {
 import { DrawingCanvas } from "@/components/game/DrawingCanvas";
 import { ChatPanel } from "@/components/game/ChatPanel";
 import { PlayersPanel, type Player } from "@/components/game/PlayersPanel";
-import { Copy, LogOut, Sparkles, Trophy } from "lucide-react";
+import { Copy, LogOut, Pencil, RefreshCw, Sparkles, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/room/$code")({
@@ -218,15 +220,27 @@ function RoomPage() {
   }, [room, isHost]);
 
   // Word picker options (drawer only, when picking)
+  const [category, setCategory] = useState<CategoryId>("animal");
   const [wordOptions, setWordOptions] = useState<string[]>([]);
+  const [customWord, setCustomWord] = useState("");
+  const usedWordsRef = useRef<Set<string>>(new Set());
+
+  // Regenerate options whenever category changes or a new picking round begins
   useEffect(() => {
     if (room?.status === "picking" && isDrawer && !room.current_word) {
-      setWordOptions(pickWords(3));
+      setWordOptions(pickWords(category, 3, usedWordsRef.current));
+    } else if (room?.status !== "picking") {
+      setCustomWord("");
     }
-  }, [room?.status, isDrawer, room?.current_word]);
+  }, [room?.status, isDrawer, room?.current_word, category]);
+
+  function refreshWords() {
+    setWordOptions(pickWords(category, 3, usedWordsRef.current));
+  }
 
   async function chooseWord(w: string) {
     if (!room) return;
+    usedWordsRef.current.add(w);
     const endsAt = new Date(Date.now() + ROUND_SECONDS * 1000).toISOString();
     await supabase
       .from("rooms")
@@ -237,6 +251,7 @@ function RoomPage() {
         round_ends_at: endsAt,
       })
       .eq("id", room.id);
+    setCustomWord("");
   }
 
   // End-of-round detection (host only)
