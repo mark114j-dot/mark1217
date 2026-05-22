@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { supabase } from "@/integrations/supabase/client";
-import { getClientId, getSavedName, makeRoomCode, saveName } from "@/lib/game";
+import { AVATARS, getClientId, getSavedAvatar, getSavedName, makeRoomCode, saveAvatar, saveName } from "@/lib/game";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -20,16 +20,19 @@ function Index() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [avatar, setAvatar] = useState(AVATARS[0]);
   const [loading, setLoading] = useState<"create" | "join" | null>(null);
 
   useEffect(() => {
     getClientId();
     setName(getSavedName());
+    setAvatar(getSavedAvatar());
   }, []);
 
   async function handleCreate() {
     if (!name.trim()) return toast.error("先輸入你的名字！");
     saveName(name.trim());
+    saveAvatar(avatar);
     setLoading("create");
     try {
       let attempts = 0;
@@ -55,11 +58,14 @@ function Index() {
     if (!name.trim()) return toast.error("先輸入你的名字！");
     if (!code.trim()) return toast.error("請輸入房間代碼");
     saveName(name.trim());
+    saveAvatar(avatar);
     setLoading("join");
     const upper = code.trim().toUpperCase();
     const { data } = await supabase.from("rooms").select("code").eq("code", upper).maybeSingle();
-    setLoading(null);
-    if (!data) return toast.error("找不到這個房間");
+    if (!data) {
+      setLoading(null);
+      return toast.error("找不到這個房間");
+    }
     navigate({ to: "/room/$code", params: { code: upper } });
   }
 
@@ -97,6 +103,26 @@ function Index() {
               className="w-full border-brutal rounded-xl px-4 py-3 bg-input focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </label>
+
+          <div>
+            <span className="text-sm font-semibold mb-1.5 block">選擇你的角色</span>
+            <div className="grid grid-cols-8 gap-1.5">
+              {AVATARS.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setAvatar(a)}
+                  className={`aspect-square rounded-lg text-xl flex items-center justify-center transition border-2 ${
+                    avatar === a
+                      ? "border-foreground bg-primary/20 scale-110 shadow-brutal-sm"
+                      : "border-transparent hover:bg-muted"
+                  }`}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <button
             onClick={handleCreate}
