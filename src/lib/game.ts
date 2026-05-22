@@ -1,5 +1,21 @@
 const STORAGE_KEY = "draw_client_id";
 const NAME_KEY = "draw_name";
+const AVATAR_KEY = "draw_avatar";
+
+export const AVATARS = [
+  "🐱", "🐶", "🐼", "🦊", "🐯", "🦁", "🐸", "🐵",
+  "🐧", "🐙", "🦄", "🐲", "🦖", "🐳", "🦉", "🐝",
+  "👻", "🤖", "👽", "🎃", "🧙", "🦸", "🧛", "🥷",
+];
+
+export function getSavedAvatar(): string {
+  if (typeof window === "undefined") return AVATARS[0];
+  return localStorage.getItem(AVATAR_KEY) || AVATARS[0];
+}
+
+export function saveAvatar(a: string) {
+  localStorage.setItem(AVATAR_KEY, a);
+}
 
 export function getClientId(): string {
   if (typeof window === "undefined") return "";
