@@ -7,6 +7,7 @@ export type Player = {
   score: number;
   color: string;
   guessed_correctly: boolean;
+  avatar?: string;
 };
 
 export function PlayersPanel({
@@ -38,9 +39,11 @@ export function PlayersPanel({
             >
               <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
               <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ background: p.color }}
-              />
+                className="w-8 h-8 rounded-full flex items-center justify-center text-lg border-2 shrink-0"
+                style={{ background: p.color + "33", borderColor: p.color }}
+              >
+                {p.avatar ?? "🐱"}
+              </span>
               <span className="font-semibold truncate flex-1">
                 {p.name} {isMe && <span className="text-xs text-muted-foreground">(你)</span>}
               </span>
