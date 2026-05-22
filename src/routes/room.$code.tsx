@@ -375,8 +375,8 @@ function RoomPage() {
       </div>
 
       {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] xl:grid-cols-[1fr_340px] gap-4 items-start">
+        <div className="space-y-4 min-w-0">
           <DrawingCanvas roomId={room.id} round={room.round} canDraw={isDrawer && room.status === "drawing"} />
 
           {/* Host / round controls */}
@@ -413,14 +413,14 @@ function RoomPage() {
           )}
         </div>
 
-        <div className="space-y-4 flex flex-col">
+        <div className="space-y-4 flex flex-col min-w-0">
           <PlayersPanel
             players={players}
             hostClientId={room.host_client_id}
             drawerId={room.current_drawer_id}
             meClientId={meClientId}
           />
-          <div className="flex-1 min-h-[320px] lg:min-h-0 lg:h-[480px]">
+          <div className="min-h-[320px] md:h-[520px]">
             <ChatPanel
               roomId={room.id}
               playerName={myName}
@@ -445,10 +445,28 @@ function RoomPage() {
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-card border-brutal shadow-brutal rounded-3xl p-6 max-w-md w-full"
+              className="bg-card border-brutal shadow-brutal rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
             >
               <h2 className="font-display font-bold text-2xl mb-1">挑一個題目來畫</h2>
-              <p className="text-sm text-muted-foreground mb-5">其他玩家看不到答案</p>
+              <p className="text-sm text-muted-foreground mb-4">其他玩家看不到答案</p>
+
+              {/* Category tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setCategory(c.id)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
+                      category === c.id
+                        ? "border-foreground bg-primary text-primary-foreground"
+                        : "border-foreground/30 bg-background hover:border-foreground"
+                    }`}
+                  >
+                    {c.emoji} {c.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="grid gap-3">
                 {wordOptions.map((w) => (
                   <button
@@ -459,6 +477,40 @@ function RoomPage() {
                     {w}
                   </button>
                 ))}
+              </div>
+
+              <button
+                onClick={refreshWords}
+                className="mt-3 w-full border-2 border-foreground/30 rounded-xl py-2 text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-muted transition"
+              >
+                <RefreshCw className="w-4 h-4" /> 換一批題目
+              </button>
+
+              {/* Custom word */}
+              <div className="mt-5 pt-4 border-t-2 border-foreground/15">
+                <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <Pencil className="w-3.5 h-3.5" /> 或自己出題（最多 5 字）
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={customWord}
+                    onChange={(e) => setCustomWord(e.target.value.slice(0, 5))}
+                    maxLength={5}
+                    placeholder="輸入題目…"
+                    className="flex-1 border-2 border-foreground/40 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-foreground bg-background"
+                  />
+                  <button
+                    onClick={() => {
+                      const t = customWord.trim();
+                      if (t.length === 0 || t.length > 5) return;
+                      chooseWord(t);
+                    }}
+                    disabled={customWord.trim().length === 0 || customWord.trim().length > 5}
+                    className="border-brutal shadow-brutal-sm rounded-lg bg-accent px-4 font-bold text-sm hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
+                  >
+                    使用
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
