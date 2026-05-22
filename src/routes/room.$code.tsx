@@ -161,6 +161,15 @@ function RoomPage() {
     room?.round_ends_at && room.status === "drawing"
       ? Math.max(0, Math.ceil((new Date(room.round_ends_at).getTime() - now) / 1000))
       : 0;
+  const isInfinite = (room?.max_rounds ?? 0) >= 9999;
+
+  const setMaxRounds = useCallback(
+    async (n: number) => {
+      if (!room || !isHost) return;
+      await supabase.from("rooms").update({ max_rounds: n }).eq("id", room.id);
+    },
+    [room, isHost],
+  );
 
   const startNextRound = useCallback(async () => {
     if (!room || !isHost) return;
@@ -308,7 +317,8 @@ function RoomPage() {
   }
 
   const drawer = players.find((p) => p.id === room.current_drawer_id);
-  const reachedEnd = room.round >= room.max_rounds && room.status === "round_end";
+  const reachedEnd =
+    !isInfinite && room.round >= room.max_rounds && room.status === "round_end";
 
   return (
     <main className="min-h-screen p-3 md:p-6 max-w-7xl mx-auto">
@@ -327,7 +337,7 @@ function RoomPage() {
           {code} <Copy className="w-3.5 h-3.5" />
         </button>
         <div className="text-sm text-muted-foreground">
-          回合 <span className="font-bold text-foreground">{Math.min(room.round, room.max_rounds)}</span> / {room.max_rounds}
+          回合 <span className="font-bold text-foreground">{isInfinite ? room.round : Math.min(room.round, room.max_rounds)}</span> / {isInfinite ? "∞" : room.max_rounds}
         </div>
         {room.status === "drawing" && (
           <div
@@ -388,27 +398,61 @@ function RoomPage() {
               <Sparkles className="w-5 h-5" /> {room.status === "waiting" ? "開始遊戲" : "下一回合"}
             </button>
           )}
+          {isHost && room.status === "waiting" && (
+            <div className="border-brutal shadow-brutal-sm rounded-2xl bg-card p-3">
+              <div className="text-xs text-muted-foreground mb-2 font-semibold">回合數設定</div>
+              <div className="flex flex-wrap gap-2">
+                {[3, 5, 10, 9999].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setMaxRounds(n)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm font-bold transition ${
+                      room.max_rounds === n
+                        ? "border-foreground bg-primary text-primary-foreground"
+                        : "border-foreground/30 bg-background hover:border-foreground"
+                    }`}
+                  >
+                    {n === 9999 ? "∞ 無限" : `${n} 回合`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {isHost && reachedEnd && (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={finishGame}
-                className="flex-1 border-brutal shadow-brutal rounded-2xl bg-secondary font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
+                className="w-full border-brutal shadow-brutal rounded-2xl bg-secondary font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
               >
                 <Trophy className="w-5 h-5 inline mr-1" /> 結算
+              </button>
+              <button
+                onClick={startNextRound}
+                className="w-full border-brutal shadow-brutal rounded-2xl bg-primary text-primary-foreground font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" /> 繼續再一回合
               </button>
             </div>
           )}
           {isHost && room.status === "finished" && (
-            <button
-              onClick={resetGame}
-              className="w-full border-brutal shadow-brutal rounded-2xl bg-accent font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
-            >
-              再玩一局
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={resetGame}
+                className="w-full border-brutal shadow-brutal rounded-2xl bg-accent font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
+              >
+                再玩一局（分數歸零）
+              </button>
+              <button
+                onClick={startNextRound}
+                className="w-full border-brutal shadow-brutal-sm rounded-2xl bg-card font-display font-bold py-3 hover:translate-y-0.5 hover:shadow-none transition"
+              >
+                繼續玩（保留分數）
+              </button>
+            </div>
           )}
-          {!isHost && (room.status === "waiting" || room.status === "round_end") && (
+          {!isHost && (room.status === "waiting" || room.status === "round_end" || room.status === "finished") && (
             <div className="text-center text-sm text-muted-foreground">
-              等待房主開始下一回合…
+              {room.status === "finished" ? "等待房主決定是否再玩一局…" : "等待房主開始下一回合…"}
             </div>
           )}
         </div>
