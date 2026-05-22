@@ -153,7 +153,7 @@ export function DrawingCanvas({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative border-brutal shadow-brutal rounded-2xl overflow-hidden bg-white">
+      <div className="relative border-brutal shadow-brutal rounded-2xl overflow-hidden bg-white mx-auto w-full max-w-[min(100%,820px)]">
         <canvas
           ref={canvasRef}
           width={W}
