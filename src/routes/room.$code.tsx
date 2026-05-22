@@ -603,3 +603,36 @@ function RoomPage() {
     </main>
   );
 }
+
+function JoiningScreen({ code }: { code: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-card border-brutal shadow-brutal rounded-3xl px-8 py-10 max-w-sm w-full text-center"
+      >
+        <motion.div
+          animate={{ rotate: [0, -10, 10, -10, 0] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          className="text-6xl mb-4"
+        >
+          ✏️
+        </motion.div>
+        <div className="font-display font-bold text-2xl mb-1">加入房間中…</div>
+        <div className="font-mono tracking-widest text-primary font-bold text-lg mb-6">{code}</div>
+        <div className="flex justify-center gap-2">
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="w-3 h-3 rounded-full bg-primary"
+              animate={{ y: [0, -8, 0], opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+            />
+          ))}
+        </div>
+        <div className="text-xs text-muted-foreground mt-6">準備你的畫筆…</div>
+      </motion.div>
+    </div>
+  );
+}
