@@ -16,8 +16,10 @@ import {
 import { DrawingCanvas } from "@/components/game/DrawingCanvas";
 import { ChatPanel } from "@/components/game/ChatPanel";
 import { PlayersPanel, type Player } from "@/components/game/PlayersPanel";
-import { Copy, LogOut, Pencil, RefreshCw, Sparkles, Trophy } from "lucide-react";
+import { Check, Copy, Lock, LogOut, Pencil, RefreshCw, Sparkles, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
+import { MusicToggle } from "@/components/MusicToggle";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/room/$code")({
   component: RoomPage,
@@ -37,27 +39,48 @@ type Room = {
   word_hint: string | null;
   round_ends_at: string | null;
   host_client_id: string;
+  draw_seconds: number;
+  require_approval: boolean;
+  host_user_id: string | null;
+};
+
+type JoinRequest = {
+  id: string;
+  room_id: string;
+  requester_id: string;
+  requester_name: string;
+  requester_avatar: string;
+  status: "pending" | "approved" | "rejected";
 };
 
 function RoomPage() {
   const { code } = Route.useParams();
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [room, setRoom] = useState<Room | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [me, setMe] = useState<Player | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const meClientId = useMemo(() => (typeof window === "undefined" ? "" : getClientId()), []);
-  const myName = useMemo(() => (typeof window === "undefined" ? "" : getSavedName()), []);
-  const myAvatar = useMemo(() => (typeof window === "undefined" ? "🐱" : getSavedAvatar()), []);
+  const myName = useMemo(
+    () => (typeof window === "undefined" ? "" : profile?.username ?? getSavedName()),
+    [profile],
+  );
+  const myAvatar = useMemo(
+    () => (typeof window === "undefined" ? "🐱" : profile?.avatar ?? getSavedAvatar()),
+    [profile],
+  );
   const joinedRef = useRef(false);
   const [joining, setJoining] = useState(true);
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
 
-  // Redirect if no name
+  // Redirect if no name (anonymous play needs at least a name)
   useEffect(() => {
-    if (typeof window !== "undefined" && !getSavedName()) {
+    if (typeof window !== "undefined" && !getSavedName() && !profile) {
       navigate({ to: "/" });
     }
-  }, [navigate]);
+  }, [navigate, profile]);
 
   // Tick
   useEffect(() => {
@@ -78,26 +101,93 @@ function RoomPage() {
       }
       setRoom(data as Room);
 
-      // Join as player (upsert)
       if (!joinedRef.current && myName) {
         joinedRef.current = true;
-        await supabase.from("players").upsert(
-          {
-            room_id: data.id,
-            client_id: meClientId,
-            name: myName,
-            color: pickColor(meClientId),
-            avatar: myAvatar,
-          },
-          { onConflict: "room_id,client_id" },
-        );
-        await supabase.from("messages").insert({
-          room_id: data.id,
-          player_name: "系統",
-          content: `${myAvatar} ${myName} 加入房間`,
-          is_system: true,
-        });
-        setJoining(false);
+        const room = data as Room;
+        const isHost = room.host_client_id === meClientId;
+        // Check if already a player
+        const { data: existing } = await supabase
+          .from("players")
+          .select("id")
+          .eq("room_id", room.id)
+          .eq("client_id", meClientId)
+          .maybeSingle();
+
+        const doJoin = async () => {
+          await supabase.from("players").upsert(
+            {
+              room_id: room.id,
+              client_id: meClientId,
+              name: myName,
+              color: pickColor(meClientId),
+              avatar: myAvatar,
+              user_id: user?.id ?? null,
+            },
+            { onConflict: "room_id,client_id" },
+          );
+          await supabase.from("messages").insert({
+            room_id: room.id,
+            player_name: "系統",
+            content: `${myAvatar} ${myName} 加入房間`,
+            is_system: true,
+          });
+          if (user) {
+            await supabase
+              .from("profiles")
+              .update({ current_room_code: code })
+              .eq("id", user.id);
+          }
+          setAwaitingApproval(false);
+          setJoining(false);
+        };
+
+        if (existing || isHost || !room.require_approval) {
+          await doJoin();
+        } else {
+          // Need approval
+          if (!user) {
+            toast.error("此房間需要房主同意才能加入，請先登入");
+            navigate({ to: "/login" });
+            return;
+          }
+          await supabase.from("room_join_requests").upsert(
+            {
+              room_id: room.id,
+              requester_id: user.id,
+              requester_name: myName,
+              requester_avatar: myAvatar,
+              status: "pending",
+            },
+            { onConflict: "room_id,requester_id" },
+          );
+          setAwaitingApproval(true);
+          setJoining(false);
+          // Listen for approval
+          const ch = supabase
+            .channel(`rjr-self:${room.id}:${user.id}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "UPDATE",
+                schema: "public",
+                table: "room_join_requests",
+                filter: `room_id=eq.${room.id}`,
+              },
+              async (payload) => {
+                const r = payload.new as JoinRequest;
+                if (r.requester_id === user.id) {
+                  if (r.status === "approved") {
+                    await doJoin();
+                    supabase.removeChannel(ch);
+                  } else if (r.status === "rejected") {
+                    toast.error("房主拒絕了你的加入請求");
+                    navigate({ to: "/" });
+                  }
+                }
+              },
+            )
+            .subscribe();
+        }
       } else {
         setJoining(false);
       }
@@ -105,7 +195,7 @@ function RoomPage() {
     return () => {
       active = false;
     };
-  }, [code, navigate, meClientId, myName, myAvatar]);
+  }, [code, navigate, meClientId, myName, myAvatar, user]);
 
   // Subscribe to room updates
   useEffect(() => {
@@ -149,6 +239,39 @@ function RoomPage() {
     setMe(players.find((p) => p.client_id === meClientId) ?? null);
   }, [players, meClientId]);
 
+  // Host: load + subscribe to pending join requests
+  const isHost = room?.host_client_id === meClientId;
+  useEffect(() => {
+    if (!room?.id || !isHost) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from("room_join_requests")
+        .select("*")
+        .eq("room_id", room.id)
+        .eq("status", "pending");
+      setJoinRequests((data ?? []) as JoinRequest[]);
+    };
+    load();
+    const ch = supabase
+      .channel(`rjr-host:${room.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "room_join_requests", filter: `room_id=eq.${room.id}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [room?.id, isHost]);
+
+  async function decideRequest(rid: string, approve: boolean) {
+    await supabase
+      .from("room_join_requests")
+      .update({ status: approve ? "approved" : "rejected" })
+      .eq("id", rid);
+  }
+
   // Leave on unload
   useEffect(() => {
     const leave = () => {
@@ -162,7 +285,15 @@ function RoomPage() {
     return () => window.removeEventListener("beforeunload", leave);
   }, [room?.id, me?.id]);
 
-  const isHost = room?.host_client_id === meClientId;
+  // Clear current_room_code on leave (for logged-in users)
+  useEffect(() => {
+    return () => {
+      if (user && profile?.current_room_code === code) {
+        supabase.from("profiles").update({ current_room_code: null }).eq("id", user.id);
+      }
+    };
+  }, [user, profile?.current_room_code, code]);
+
   const isDrawer = me != null && room?.current_drawer_id === me.id;
   const timeLeft =
     room?.round_ends_at && room.status === "drawing"
@@ -177,6 +308,19 @@ function RoomPage() {
     },
     [room, isHost],
   );
+
+  const setDrawSeconds = useCallback(
+    async (n: number) => {
+      if (!room || !isHost) return;
+      await supabase.from("rooms").update({ draw_seconds: n }).eq("id", room.id);
+    },
+    [room, isHost],
+  );
+
+  const toggleApproval = useCallback(async () => {
+    if (!room || !isHost) return;
+    await supabase.from("rooms").update({ require_approval: !room.require_approval }).eq("id", room.id);
+  }, [room, isHost]);
 
   const startNextRound = useCallback(async () => {
     if (!room || !isHost) return;
@@ -257,7 +401,8 @@ function RoomPage() {
   async function chooseWord(w: string) {
     if (!room) return;
     usedWordsRef.current.add(w);
-    const endsAt = new Date(Date.now() + ROUND_SECONDS * 1000).toISOString();
+    const secs = room.draw_seconds ?? ROUND_SECONDS;
+    const endsAt = new Date(Date.now() + secs * 1000).toISOString();
     await supabase
       .from("rooms")
       .update({
@@ -302,7 +447,8 @@ function RoomPage() {
 
   async function onCorrectGuess() {
     if (!me || !room) return;
-    const earned = 50 + Math.round((timeLeft / ROUND_SECONDS) * 50);
+    const secs = room.draw_seconds ?? ROUND_SECONDS;
+    const earned = 50 + Math.round((timeLeft / secs) * 50);
     await supabase
       .from("players")
       .update({ guessed_correctly: true, score: me.score + earned })
@@ -315,6 +461,9 @@ function RoomPage() {
     toast.success("已複製房間代碼");
   }
 
+  if (awaitingApproval) {
+    return <ApprovalWaitScreen code={code} />;
+  }
   if (!room || joining || players.length === 0) {
     return <JoiningScreen code={code} />;
   }
