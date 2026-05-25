@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      direct_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -63,6 +117,7 @@ export type Database = {
           name: string
           room_id: string
           score: number
+          user_id: string | null
         }
         Insert: {
           avatar?: string
@@ -74,6 +129,7 @@ export type Database = {
           name: string
           room_id: string
           score?: number
+          user_id?: string | null
         }
         Update: {
           avatar?: string
@@ -85,10 +141,82 @@ export type Database = {
           name?: string
           room_id?: string
           score?: number
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar: string
+          created_at: string
+          current_room_code: string | null
+          id: string
+          is_online: boolean
+          last_seen: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          avatar?: string
+          created_at?: string
+          current_room_code?: string | null
+          id: string
+          is_online?: boolean
+          last_seen?: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar?: string
+          created_at?: string
+          current_room_code?: string | null
+          id?: string
+          is_online?: boolean
+          last_seen?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      room_join_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requester_avatar: string
+          requester_id: string
+          requester_name: string
+          room_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_avatar?: string
+          requester_id: string
+          requester_name: string
+          room_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_avatar?: string
+          requester_id?: string
+          requester_name?: string
+          room_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_join_requests_room_id_fkey"
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
@@ -102,9 +230,12 @@ export type Database = {
           created_at: string
           current_drawer_id: string | null
           current_word: string | null
+          draw_seconds: number
           host_client_id: string
+          host_user_id: string | null
           id: string
           max_rounds: number
+          require_approval: boolean
           round: number
           round_ends_at: string | null
           status: string
@@ -115,9 +246,12 @@ export type Database = {
           created_at?: string
           current_drawer_id?: string | null
           current_word?: string | null
+          draw_seconds?: number
           host_client_id: string
+          host_user_id?: string | null
           id?: string
           max_rounds?: number
+          require_approval?: boolean
           round?: number
           round_ends_at?: string | null
           status?: string
@@ -128,9 +262,12 @@ export type Database = {
           created_at?: string
           current_drawer_id?: string | null
           current_word?: string | null
+          draw_seconds?: number
           host_client_id?: string
+          host_user_id?: string | null
           id?: string
           max_rounds?: number
+          require_approval?: boolean
           round?: number
           round_ends_at?: string | null
           status?: string
