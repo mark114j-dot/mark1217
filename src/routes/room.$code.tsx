@@ -491,6 +491,12 @@ function RoomPage() {
         <div className="text-sm text-muted-foreground">
           回合 <span className="font-bold text-foreground">{isInfinite ? room.round : Math.min(room.round, room.max_rounds)}</span> / {isInfinite ? "∞" : room.max_rounds}
         </div>
+        <MusicToggle />
+        {room.require_approval && (
+          <span className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground flex items-center gap-1">
+            <Lock className="w-3 h-3" /> 私人房
+          </span>
+        )}
         {room.status === "drawing" && (
           <div
             className={`ml-auto px-4 py-2 rounded-xl border-brutal shadow-brutal-sm font-display font-bold tabular-nums ${
@@ -568,8 +574,72 @@ function RoomPage() {
                   </button>
                 ))}
               </div>
+              <div className="text-xs text-muted-foreground mb-2 mt-4 font-semibold">每回合畫畫秒數</div>
+              <div className="flex flex-wrap gap-2">
+                {[30, 60, 75, 90, 120, 180].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setDrawSeconds(n)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm font-bold transition ${
+                      room.draw_seconds === n
+                        ? "border-foreground bg-accent text-accent-foreground"
+                        : "border-foreground/30 bg-background hover:border-foreground"
+                    }`}
+                  >
+                    {n}s
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-3 pt-3 border-t-2 border-foreground/15">
+                <div>
+                  <div className="text-sm font-semibold flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" /> 私人房（加入需同意）
+                  </div>
+                  <div className="text-xs text-muted-foreground">開啟後，新玩家加入需房主批准</div>
+                </div>
+                <button
+                  onClick={toggleApproval}
+                  className={`relative w-12 h-6 rounded-full border-2 border-foreground transition ${
+                    room.require_approval ? "bg-primary" : "bg-muted"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-card border border-foreground transition-all ${
+                      room.require_approval ? "left-6" : "left-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           )}
+
+          {/* Host: pending join requests */}
+          {isHost && joinRequests.length > 0 && (
+            <div className="border-brutal shadow-brutal rounded-2xl bg-secondary/40 p-3 space-y-2">
+              <div className="text-sm font-display font-bold">
+                🔔 待批准加入請求 ({joinRequests.length})
+              </div>
+              {joinRequests.map((r) => (
+                <div key={r.id} className="flex items-center gap-2 bg-card border-2 border-foreground/20 rounded-xl px-3 py-2">
+                  <span className="text-xl">{r.requester_avatar}</span>
+                  <span className="flex-1 font-semibold text-sm truncate">{r.requester_name}</span>
+                  <button
+                    onClick={() => decideRequest(r.id, true)}
+                    className="border-2 border-foreground rounded-lg bg-primary text-primary-foreground px-2 py-1 hover:translate-y-0.5 transition"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => decideRequest(r.id, false)}
+                    className="border-2 border-foreground/30 rounded-lg px-2 py-1 hover:bg-muted transition"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {isHost && reachedEnd && (
             <div className="flex flex-col gap-2">
               <button
@@ -781,6 +851,31 @@ function JoiningScreen({ code }: { code: string }) {
           ))}
         </div>
         <div className="text-xs text-muted-foreground mt-6">準備你的畫筆…</div>
+      </motion.div>
+    </div>
+  );
+}
+
+function ApprovalWaitScreen({ code }: { code: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-card border-brutal shadow-brutal rounded-3xl px-8 py-10 max-w-sm w-full text-center"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          className="text-6xl mb-4"
+        >
+          🔒
+        </motion.div>
+        <div className="font-display font-bold text-2xl mb-1">等待房主同意…</div>
+        <div className="font-mono tracking-widest text-primary font-bold text-lg mb-4">{code}</div>
+        <p className="text-sm text-muted-foreground">
+          這是私人房間，房主同意後你就會自動加入
+        </p>
       </motion.div>
     </div>
   );
