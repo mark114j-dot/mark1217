@@ -5,6 +5,9 @@ import { motion } from "motion/react";
 import { supabase } from "@/integrations/supabase/client";
 import { AVATARS, getClientId, getSavedAvatar, getSavedName, makeRoomCode, saveAvatar, saveName } from "@/lib/game";
 import { toast } from "sonner";
+import { AuthMenu } from "@/components/AuthMenu";
+import { MusicToggle } from "@/components/MusicToggle";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -22,12 +25,21 @@ function Index() {
   const [code, setCode] = useState("");
   const [avatar, setAvatar] = useState(AVATARS[0]);
   const [loading, setLoading] = useState<"create" | "join" | null>(null);
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     getClientId();
     setName(getSavedName());
     setAvatar(getSavedAvatar());
   }, []);
+
+  // Pre-fill name/avatar from profile when logged in
+  useEffect(() => {
+    if (profile) {
+      if (!getSavedName()) setName(profile.username);
+      setAvatar(profile.avatar);
+    }
+  }, [profile]);
 
   async function handleCreate() {
     if (!name.trim()) return toast.error("先輸入你的名字！");
@@ -72,6 +84,12 @@ function Index() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+        <div className="flex items-center gap-2 mb-6">
+          <MusicToggle />
+          <div className="ml-auto">
+            <AuthMenu />
+          </div>
+        </div>
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -157,7 +175,7 @@ function Index() {
         </motion.div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          無需登入 · 把房間代碼分享給朋友就能開玩
+          {user ? "登入中 · 在好友頁可邀請朋友" : "無需登入也能玩 · 登入後可加好友與私訊"}
         </p>
       </div>
     </main>
