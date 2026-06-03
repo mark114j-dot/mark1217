@@ -34,7 +34,7 @@ export function useMiniRoom(code: string) {
         setLoading(false);
         return;
       }
-      const players = (data.players as MiniPlayer[]) ?? [];
+      const players = ((data.players as unknown) as MiniPlayer[]) ?? [];
       if (!players.find((p) => p.client_id === meId)) {
         const me: MiniPlayer = {
           client_id: meId,
@@ -44,9 +44,9 @@ export function useMiniRoom(code: string) {
         };
         const next = [...players, me];
         await supabase.from("mini_rooms").update({ players: next, updated_at: new Date().toISOString() }).eq("id", data.id);
-        setRoom({ ...(data as MiniRoom), players: next });
+        setRoom({ ...((data as unknown) as MiniRoom), players: next });
       } else {
-        setRoom(data as MiniRoom);
+        setRoom((data as unknown) as MiniRoom);
       }
       setLoading(false);
     }
