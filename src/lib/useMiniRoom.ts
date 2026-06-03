@@ -64,7 +64,12 @@ export function useMiniRoom(code: string) {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "mini_rooms", filter: `id=eq.${room.id}` },
-        (payload) => setRoom((prev) => (prev ? { ...prev, ...(payload.new as any) } : (payload.new as MiniRoom))),
+        (payload) =>
+          setRoom((prev) =>
+            prev
+              ? { ...prev, ...((payload.new as unknown) as MiniRoom) }
+              : ((payload.new as unknown) as MiniRoom),
+          ),
       )
       .subscribe();
     return () => {
