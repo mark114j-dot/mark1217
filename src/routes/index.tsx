@@ -177,6 +177,15 @@ function Index() {
         <p className="text-center text-xs text-muted-foreground mt-6">
           {user ? "登入中 · 在好友頁可邀請朋友" : "無需登入也能玩 · 登入後可加好友與私訊"}
         </p>
+
+        <div className="mt-6 text-center">
+          <a
+            href="/games"
+            className="inline-block border-brutal shadow-brutal rounded-2xl px-5 py-3 bg-accent text-accent-foreground font-display font-bold hover:translate-y-0.5 hover:shadow-none transition"
+          >
+            🎮 進入小遊戲大廳（10 款連線遊戲）
+          </a>
+        </div>
       </div>
     </main>
   );
