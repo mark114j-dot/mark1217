@@ -10,13 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as GamesRouteImport } from './routes/games'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
+import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesRoute = GamesRouteImport.update({
+  id: '/games',
+  path: '/games',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FriendsRoute = FriendsRouteImport.update({
@@ -34,39 +41,71 @@ const RoomCodeRoute = RoomCodeRouteImport.update({
   path: '/room/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MiniTypeCodeRoute = MiniTypeCodeRouteImport.update({
+  id: '/mini/$type/$code',
+  path: '/mini/$type/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/friends': typeof FriendsRoute
+  '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/room/$code': typeof RoomCodeRoute
+  '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/friends': typeof FriendsRoute
+  '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/room/$code': typeof RoomCodeRoute
+  '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/friends': typeof FriendsRoute
+  '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/room/$code': typeof RoomCodeRoute
+  '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/friends' | '/login' | '/room/$code'
+  fullPaths:
+    | '/'
+    | '/friends'
+    | '/games'
+    | '/login'
+    | '/room/$code'
+    | '/mini/$type/$code'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/friends' | '/login' | '/room/$code'
-  id: '__root__' | '/' | '/friends' | '/login' | '/room/$code'
+  to:
+    | '/'
+    | '/friends'
+    | '/games'
+    | '/login'
+    | '/room/$code'
+    | '/mini/$type/$code'
+  id:
+    | '__root__'
+    | '/'
+    | '/friends'
+    | '/games'
+    | '/login'
+    | '/room/$code'
+    | '/mini/$type/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FriendsRoute: typeof FriendsRoute
+  GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
   RoomCodeRoute: typeof RoomCodeRoute
+  MiniTypeCodeRoute: typeof MiniTypeCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -76,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games': {
+      id: '/games'
+      path: '/games'
+      fullPath: '/games'
+      preLoaderRoute: typeof GamesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/friends': {
@@ -99,25 +145,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mini/$type/$code': {
+      id: '/mini/$type/$code'
+      path: '/mini/$type/$code'
+      fullPath: '/mini/$type/$code'
+      preLoaderRoute: typeof MiniTypeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FriendsRoute: FriendsRoute,
+  GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
   RoomCodeRoute: RoomCodeRoute,
+  MiniTypeCodeRoute: MiniTypeCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -106,6 +106,39 @@ export type Database = {
           },
         ]
       }
+      mini_rooms: {
+        Row: {
+          code: string
+          created_at: string
+          game_type: string
+          host_client_id: string
+          id: string
+          players: Json
+          state: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          game_type: string
+          host_client_id: string
+          id?: string
+          players?: Json
+          state?: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          game_type?: string
+          host_client_id?: string
+          id?: string
+          players?: Json
+          state?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           avatar: string
