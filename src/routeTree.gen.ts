@@ -14,6 +14,7 @@ import { Route as GamesRouteImport } from './routes/games'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
+import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -40,6 +41,11 @@ const RoomCodeRoute = RoomCodeRouteImport.update({
   path: '/room/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MiniTypeCodeRoute = MiniTypeCodeRouteImport.update({
+  id: '/mini/$type/$code',
+  path: '/mini/$type/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/room/$code': typeof RoomCodeRoute
+  '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/room/$code': typeof RoomCodeRoute
+  '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/room/$code': typeof RoomCodeRoute
+  '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/friends' | '/games' | '/login' | '/room/$code'
+  fullPaths:
+    | '/'
+    | '/friends'
+    | '/games'
+    | '/login'
+    | '/room/$code'
+    | '/mini/$type/$code'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/friends' | '/games' | '/login' | '/room/$code'
-  id: '__root__' | '/' | '/friends' | '/games' | '/login' | '/room/$code'
+  to:
+    | '/'
+    | '/friends'
+    | '/games'
+    | '/login'
+    | '/room/$code'
+    | '/mini/$type/$code'
+  id:
+    | '__root__'
+    | '/'
+    | '/friends'
+    | '/games'
+    | '/login'
+    | '/room/$code'
+    | '/mini/$type/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
   RoomCodeRoute: typeof RoomCodeRoute
+  MiniTypeCodeRoute: typeof MiniTypeCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mini/$type/$code': {
+      id: '/mini/$type/$code'
+      path: '/mini/$type/$code'
+      fullPath: '/mini/$type/$code'
+      preLoaderRoute: typeof MiniTypeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,7 +161,18 @@ const rootRouteChildren: RootRouteChildren = {
   GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
   RoomCodeRoute: RoomCodeRoute,
+  MiniTypeCodeRoute: MiniTypeCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
