@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import type { MiniRoom, MiniPlayer } from "@/lib/useMiniRoom";
 
 type GameProps = {
@@ -626,7 +626,7 @@ function Snap({ room, meId, update }: GameProps) {
   );
 }
 
-export const GAME_COMPONENTS: Record<string, (p: GameProps) => JSX.Element> = {
+export const GAME_COMPONENTS: Record<string, (p: GameProps) => ReactElement> = {
   tictactoe: TicTacToe,
   gomoku: Gomoku,
   reversi: Reversi,
