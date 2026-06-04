@@ -637,4 +637,577 @@ export const GAME_COMPONENTS: Record<string, (p: GameProps) => ReactElement> = {
   numberguess: NumberGuess,
   wordchain: WordChain,
   snap: Snap,
+  quickdraw: QuickDraw,
+  nim: Nim,
+  coinflip: CoinFlip,
+  highlow: HighLow,
+  dotsboxes: DotsBoxes,
+  treasure: Treasure,
+  mathrace: MathRace,
+  typing: Typing,
+  bingo: Bingo,
+  hangman: Hangman,
 };
+
+/* ───────────────────── 11. QuickDraw (牛仔對決) ───────────────────── */
+function QuickDraw({ room, meId, update }: GameProps) {
+  const s = room.state as { phase?: "idle"|"ready"|"go"; goAt?: number; winnerId?: string | null; falseBy?: string | null };
+  const phase = s.phase ?? "idle";
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const isHost = meId === room.host_client_id;
+
+  useEffect(() => {
+    if (phase === "ready" && isHost && s.goAt) {
+      const t = setTimeout(() => update({ state: { phase: "go", goAt: Date.now(), winnerId: null, falseBy: null } }), Math.max(0, s.goAt - Date.now()));
+      return () => clearTimeout(t);
+    }
+  }, [phase, s.goAt]);
+
+  async function start() {
+    const delay = 1500 + Math.floor(Math.random() * 4000);
+    await update({ state: { phase: "ready", goAt: Date.now() + delay, winnerId: null, falseBy: null } });
+  }
+  async function tap() {
+    if (phase === "ready" && !s.falseBy) {
+      const players = addScore(room.players, meId, -1);
+      await update({ state: { ...s, phase: "idle", falseBy: meId }, players });
+      return;
+    }
+    if (phase === "go" && !s.winnerId) {
+      const players = addScore(room.players, meId, 1);
+      await update({ state: { ...s, phase: "idle", winnerId: meId }, players });
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={phase === "go" ? "win" : phase === "ready" ? "lose" : "info"}>
+        {phase === "ready" ? "🤠 準備…別亂拍！" : phase === "go" ? "🔥 GO！立刻拍！" : s.winnerId ? `${room.players.find(p=>p.client_id===s.winnerId)?.name} 最快！+1` : s.falseBy ? `${room.players.find(p=>p.client_id===s.falseBy)?.name} 偷跑 -1` : "按開始等候 GO"}
+      </Banner>
+      <div onClick={tap} className={`mx-auto w-72 h-48 rounded-2xl border-brutal shadow-brutal flex items-center justify-center text-7xl font-black cursor-pointer ${phase==="go"?"bg-accent":phase==="ready"?"bg-destructive/30":"bg-card"}`}>
+        {phase === "go" ? "GO!" : phase === "ready" ? "…" : "🤠"}
+      </div>
+      {phase === "idle" && <button onClick={start} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">開始決鬥</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 12. Nim (取石頭) ───────────────────── */
+function Nim({ room, meId, update }: GameProps) {
+  const s = room.state as { stones?: number; turn?: string; loserId?: string | null };
+  const p1 = room.players[0]; const p2 = room.players[1];
+  if (!p1 || !p2) return <WaitingForPlayers needed={2} />;
+  const stones = s.stones ?? 21;
+  const turn = s.turn ?? p1.client_id;
+  const loserId = s.loserId ?? null;
+
+  async function take(n: number) {
+    if (loserId || turn !== meId || n > stones) return;
+    const left = stones - n;
+    if (left === 0) {
+      const winnerId = room.players.find(p => p.client_id !== meId)!.client_id;
+      await update({ state: { stones: 0, turn, loserId: meId }, players: addScore(room.players, winnerId, 1) });
+    } else {
+      await update({ state: { stones: left, turn: turn === p1.client_id ? p2.client_id : p1.client_id, loserId: null } });
+    }
+  }
+  async function reset() { await update({ state: { stones: 21, turn: p1.client_id, loserId: null } }); }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={loserId ? "lose" : "info"}>
+        {loserId ? `💥 ${room.players.find(p=>p.client_id===loserId)?.name} 拿了最後一顆，輸了！` : turn === meId ? "輪到你 — 取 1~3 顆" : "等待對手…"}
+      </Banner>
+      <div className="bg-card border-brutal shadow-brutal-sm rounded-xl p-4 max-w-md mx-auto text-center">
+        <div className="text-3xl leading-relaxed break-words">{Array.from({length: stones}).map((_,i)=><span key={i}>🪨</span>)}</div>
+        <div className="mt-2 text-sm text-muted-foreground">剩 {stones} 顆</div>
+      </div>
+      {!loserId && turn === meId && (
+        <div className="flex gap-2 justify-center">
+          {[1,2,3].map(n => (
+            <button key={n} onClick={() => take(n)} disabled={n>stones} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-primary text-primary-foreground font-bold disabled:opacity-40">取 {n}</button>
+          ))}
+        </div>
+      )}
+      {loserId && <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 13. CoinFlip (猜硬幣) ───────────────────── */
+function CoinFlip({ room, meId, update }: GameProps) {
+  const s = room.state as { picks?: Record<string,"H"|"T">; result?: "H"|"T"|null; round?: number; max?: number };
+  const p1 = room.players[0]; const p2 = room.players[1];
+  if (!p1 || !p2) return <WaitingForPlayers needed={2} />;
+  const picks = s.picks ?? {};
+  const round = s.round ?? 1; const max = s.max ?? 5;
+  const both = picks[p1.client_id] && picks[p2.client_id];
+  const result = s.result ?? null;
+
+  async function pick(c: "H"|"T") {
+    if (picks[meId] || both) return;
+    await update({ state: { ...s, picks: { ...picks, [meId]: c }, round, max } });
+  }
+  async function flip() {
+    const r: "H"|"T" = Math.random() < 0.5 ? "H" : "T";
+    let players = room.players;
+    if (picks[p1.client_id] === r) players = addScore(players, p1.client_id, 1);
+    if (picks[p2.client_id] === r) players = addScore(players, p2.client_id, 1);
+    await update({ state: { picks, result: r, round, max }, players });
+  }
+  async function next() {
+    await update({ state: { picks: {}, result: null, round: round + 1, max } });
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone="info">第 {round} / {max} 局</Banner>
+      <div className="mx-auto w-36 h-36 rounded-full border-brutal shadow-brutal bg-amber-300 dark:bg-amber-500 flex items-center justify-center text-6xl">
+        {result === "H" ? "🙂" : result === "T" ? "🔢" : "🪙"}
+      </div>
+      <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+        {[p1, p2].map(p => (
+          <div key={p.client_id} className="border-brutal shadow-brutal-sm rounded-xl p-3 bg-card text-center">
+            <div className="text-xs">{p.name}{p.client_id===meId?" (你)":""}</div>
+            <div className="text-3xl my-1">{both || result ? (picks[p.client_id] === "H" ? "🙂 正" : "🔢 反") : picks[p.client_id] ? "❓" : "…"}</div>
+          </div>
+        ))}
+      </div>
+      {!picks[meId] && !both && (
+        <div className="flex gap-2 justify-center">
+          <button onClick={() => pick("H")} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-card font-bold">🙂 正面</button>
+          <button onClick={() => pick("T")} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-card font-bold">🔢 反面</button>
+        </div>
+      )}
+      {both && !result && <button onClick={flip} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">🪙 翻硬幣</button>}
+      {result && <button onClick={next} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-accent font-bold">下一局</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 14. HighLow (比大小) ───────────────────── */
+function HighLow({ room, meId, update }: GameProps) {
+  const s = room.state as { card?: number; turn?: string; loserId?: string | null };
+  const p1 = room.players[0]; const p2 = room.players[1];
+  if (!p1 || !p2) return <WaitingForPlayers needed={2} />;
+  const card = s.card ?? Math.floor(Math.random()*13)+1;
+  const turn = s.turn ?? p1.client_id;
+  const loserId = s.loserId ?? null;
+
+  useEffect(() => {
+    if (s.card === undefined && meId === room.host_client_id) {
+      update({ state: { card, turn: p1.client_id, loserId: null } });
+    }
+  }, [s.card]);
+
+  async function guess(dir: "hi"|"lo") {
+    if (loserId || turn !== meId) return;
+    const next = Math.floor(Math.random()*13)+1;
+    const correct = next === card ? null : (dir === "hi" ? next > card : next < card);
+    if (correct === false) {
+      const opp = room.players.find(p=>p.client_id!==meId)!.client_id;
+      await update({ state: { card: next, turn, loserId: meId }, players: addScore(room.players, opp, 1) });
+    } else {
+      await update({ state: { card: next, turn: turn===p1.client_id?p2.client_id:p1.client_id, loserId: null } });
+    }
+  }
+  async function reset() { await update({ state: { card: Math.floor(Math.random()*13)+1, turn: p1.client_id, loserId: null } }); }
+  const face = (n: number) => n===1?"A":n===11?"J":n===12?"Q":n===13?"K":String(n);
+  const turnName = room.players.find(p=>p.client_id===turn)?.name;
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={loserId ? "lose" : "info"}>
+        {loserId ? `${room.players.find(p=>p.client_id===loserId)?.name} 猜錯了！` : `輪到 ${turnName}${turn===meId?" (你)":""} — 猜下一張更高或更低？`}
+      </Banner>
+      <div className="mx-auto w-40 h-56 rounded-2xl border-brutal shadow-brutal bg-card flex items-center justify-center text-7xl font-black">{face(card)}</div>
+      {!loserId && turn === meId && (
+        <div className="flex gap-3 justify-center">
+          <button onClick={() => guess("hi")} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-primary text-primary-foreground font-bold">⬆ 更高</button>
+          <button onClick={() => guess("lo")} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-secondary font-bold">⬇ 更低</button>
+        </div>
+      )}
+      {loserId && <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 15. Dots & Boxes (4x4 dots → 9 boxes) ───────────────────── */
+function DotsBoxes({ room, meId, update }: GameProps) {
+  const SIZE = 4; // dots per side
+  const HCount = SIZE * (SIZE - 1);
+  const VCount = (SIZE - 1) * SIZE;
+  const p1 = room.players[0]; const p2 = room.players[1];
+  if (!p1 || !p2) return <WaitingForPlayers needed={2} />;
+  const s = room.state as { h?: (string|null)[]; v?: (string|null)[]; boxes?: (string|null)[]; turn?: string };
+  const h = s.h ?? Array(HCount).fill(null);
+  const v = s.v ?? Array(VCount).fill(null);
+  const boxes = s.boxes ?? Array((SIZE-1)*(SIZE-1)).fill(null);
+  const turn = s.turn ?? p1.client_id;
+  const myMark = meId === p1.client_id ? "A" : meId === p2.client_id ? "B" : null;
+
+  function checkBoxes(nh: (string|null)[], nv: (string|null)[], nb: (string|null)[], mark: string) {
+    let gained = 0;
+    const out = [...nb];
+    for (let r = 0; r < SIZE-1; r++) for (let c = 0; c < SIZE-1; c++) {
+      const i = r*(SIZE-1)+c;
+      if (out[i]) continue;
+      const top = nh[r*(SIZE-1)+c], bot = nh[(r+1)*(SIZE-1)+c];
+      const lft = nv[r*SIZE+c], rgt = nv[r*SIZE+c+1];
+      if (top && bot && lft && rgt) { out[i] = mark; gained++; }
+    }
+    return { boxes: out, gained };
+  }
+
+  async function drawH(r: number, c: number) {
+    if (turn !== meId || !myMark) return;
+    const idx = r*(SIZE-1)+c; if (h[idx]) return;
+    const nh = [...h]; nh[idx] = myMark;
+    const { boxes: nb, gained } = checkBoxes(nh, v, boxes, myMark);
+    const done = nb.every(Boolean);
+    const nextTurn = gained > 0 && !done ? meId : (turn === p1.client_id ? p2.client_id : p1.client_id);
+    let players = room.players;
+    if (done) {
+      const a = nb.filter(x=>x==="A").length, b = nb.filter(x=>x==="B").length;
+      if (a !== b) players = addScore(room.players, a>b?p1.client_id:p2.client_id, 1);
+    }
+    await update({ state: { h: nh, v, boxes: nb, turn: nextTurn }, ...(done?{players}:{}) });
+  }
+  async function drawV(r: number, c: number) {
+    if (turn !== meId || !myMark) return;
+    const idx = r*SIZE+c; if (v[idx]) return;
+    const nv = [...v]; nv[idx] = myMark;
+    const { boxes: nb, gained } = checkBoxes(h, nv, boxes, myMark);
+    const done = nb.every(Boolean);
+    const nextTurn = gained > 0 && !done ? meId : (turn === p1.client_id ? p2.client_id : p1.client_id);
+    let players = room.players;
+    if (done) {
+      const a = nb.filter(x=>x==="A").length, b = nb.filter(x=>x==="B").length;
+      if (a !== b) players = addScore(room.players, a>b?p1.client_id:p2.client_id, 1);
+    }
+    await update({ state: { h, v: nv, boxes: nb, turn: nextTurn }, ...(done?{players}:{}) });
+  }
+  async function reset() { await update({ state: { h: Array(HCount).fill(null), v: Array(VCount).fill(null), boxes: Array((SIZE-1)*(SIZE-1)).fill(null), turn: p1.client_id } }); }
+
+  const done = boxes.every(Boolean);
+  const a = boxes.filter(x=>x==="A").length, b = boxes.filter(x=>x==="B").length;
+  const cell = 56;
+  return (
+    <div className="space-y-3">
+      <Banner tone={done ? "win" : "info"}>
+        {done ? (a===b ? "平手" : `${a>b?p1.name:p2.name} 獲勝！`) : turn===meId ? `輪到你 (${myMark})` : "等待對手…"}　🟦{a} 🟥{b}
+      </Banner>
+      <div className="mx-auto bg-card border-brutal shadow-brutal rounded-xl p-3 inline-block">
+        <div className="relative" style={{ width: cell*(SIZE-1)+12, height: cell*(SIZE-1)+12 }}>
+          {Array.from({length: SIZE}).map((_,r)=>Array.from({length: SIZE}).map((_,c)=>(
+            <div key={`d${r}${c}`} className="absolute w-3 h-3 rounded-full bg-foreground" style={{ left: c*cell, top: r*cell }} />
+          )))}
+          {Array.from({length: SIZE}).map((_,r)=>Array.from({length: SIZE-1}).map((_,c)=>{
+            const idx = r*(SIZE-1)+c; const filled = h[idx];
+            return <button key={`h${r}${c}`} onClick={()=>drawH(r,c)} disabled={!!filled} className={`absolute h-2 ${filled?"bg-primary":"bg-muted hover:bg-primary/40"}`} style={{ left: c*cell+12, top: r*cell+5, width: cell-12 }} />;
+          }))}
+          {Array.from({length: SIZE-1}).map((_,r)=>Array.from({length: SIZE}).map((_,c)=>{
+            const idx = r*SIZE+c; const filled = v[idx];
+            return <button key={`v${r}${c}`} onClick={()=>drawV(r,c)} disabled={!!filled} className={`absolute w-2 ${filled?"bg-primary":"bg-muted hover:bg-primary/40"}`} style={{ left: c*cell+5, top: r*cell+12, height: cell-12 }} />;
+          }))}
+          {boxes.map((bx,i)=>{
+            const r = Math.floor(i/(SIZE-1)), c = i%(SIZE-1);
+            if (!bx) return null;
+            return <div key={`b${i}`} className={`absolute flex items-center justify-center text-xl font-black ${bx==="A"?"text-blue-500":"text-red-500"}`} style={{ left: c*cell+12, top: r*cell+12, width: cell-12, height: cell-12 }}>{bx}</div>;
+          })}
+        </div>
+      </div>
+      {done && <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 16. Treasure Hunt (尋寶對戰) ───────────────────── */
+function Treasure({ room, meId, update }: GameProps) {
+  const N = 5;
+  const p1 = room.players[0]; const p2 = room.players[1];
+  if (!p1 || !p2) return <WaitingForPlayers needed={2} />;
+  const s = room.state as { hidden?: Record<string, number>; shots?: Record<string, number[]>; turn?: string; winnerId?: string | null };
+  const hidden = s.hidden ?? {};
+  const shots = s.shots ?? { [p1.client_id]: [], [p2.client_id]: [] };
+  const turn = s.turn ?? p1.client_id;
+  const winnerId = s.winnerId ?? null;
+  const myHidden = hidden[meId];
+  const oppId = meId === p1.client_id ? p2.client_id : p1.client_id;
+
+  async function hide(i: number) {
+    if (myHidden !== undefined) return;
+    await update({ state: { ...s, hidden: { ...hidden, [meId]: i }, shots, turn: p1.client_id, winnerId: null } });
+  }
+  async function shoot(i: number) {
+    if (winnerId || turn !== meId || (shots[meId] ?? []).includes(i) || hidden[oppId] === undefined) return;
+    const mine = [...(shots[meId] ?? []), i];
+    const newShots = { ...shots, [meId]: mine };
+    if (i === hidden[oppId]) {
+      await update({ state: { ...s, shots: newShots, winnerId: meId }, players: addScore(room.players, meId, 1) });
+    } else {
+      await update({ state: { ...s, shots: newShots, turn: oppId, winnerId: null } });
+    }
+  }
+  async function reset() { await update({ state: { hidden: {}, shots: { [p1.client_id]: [], [p2.client_id]: [] }, turn: p1.client_id, winnerId: null } }); }
+
+  const bothHidden = hidden[p1.client_id] !== undefined && hidden[p2.client_id] !== undefined;
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={winnerId ? "win" : "info"}>
+        {winnerId ? `💎 ${room.players.find(p=>p.client_id===winnerId)?.name} 找到寶藏！` : !bothHidden ? (myHidden===undefined ? "選一格藏寶藏 💎" : "等對手藏寶藏…") : turn === meId ? "輪到你開砲 💣" : "等待對手…"}
+      </Banner>
+      <div className="grid grid-cols-5 gap-2 max-w-sm mx-auto">
+        {Array.from({ length: N*N }).map((_, i) => {
+          const myShot = (shots[meId] ?? []).includes(i);
+          const hit = myShot && i === hidden[oppId];
+          const isMine = myHidden === i;
+          return (
+            <button key={i} onClick={() => bothHidden ? shoot(i) : hide(i)} disabled={bothHidden ? (myShot || !!winnerId || turn!==meId) : myHidden!==undefined} className={`aspect-square rounded-lg border-brutal shadow-brutal-sm text-2xl ${hit?"bg-accent":myShot?"bg-muted":"bg-card hover:translate-y-0.5 hover:shadow-none"} transition`}>
+              {hit ? "💎" : myShot ? "💥" : isMine && !bothHidden ? "💎" : ""}
+            </button>
+          );
+        })}
+      </div>
+      {winnerId && <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 17. MathRace (心算王) ───────────────────── */
+function MathRace({ room, meId, update }: GameProps) {
+  const s = room.state as { a?: number; b?: number; op?: "+"|"-"|"×"; winnerId?: string | null; round?: number };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const a = s.a ?? 0; const b = s.b ?? 0; const op = s.op ?? "+";
+  const winnerId = s.winnerId ?? null;
+  const round = s.round ?? 0;
+  const [val, setVal] = useState("");
+  useEffect(() => { setVal(""); }, [round]);
+
+  function answer() {
+    return op === "+" ? a + b : op === "-" ? a - b : a * b;
+  }
+  async function newQ() {
+    const ops: ("+"|"-"|"×")[] = ["+","-","×"];
+    const o = ops[Math.floor(Math.random()*ops.length)];
+    const x = Math.floor(Math.random()*20)+1, y = Math.floor(Math.random()*20)+1;
+    await update({ state: { a: o==="-"?Math.max(x,y):x, b: o==="-"?Math.min(x,y):y, op: o, winnerId: null, round: round + 1 } });
+  }
+  async function submit() {
+    if (winnerId) return;
+    const n = parseInt(val);
+    if (n === answer()) await update({ state: { ...s, winnerId: meId }, players: addScore(room.players, meId, 1) });
+    else setVal("");
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={winnerId ? "win" : "info"}>
+        {winnerId ? `🏆 ${room.players.find(p=>p.client_id===winnerId)?.name} 答對！答案 = ${answer()}` : round === 0 ? "按下一題開始" : "最快答對得分！"}
+      </Banner>
+      {round > 0 && (
+        <div className="mx-auto w-fit border-brutal shadow-brutal rounded-2xl bg-card px-10 py-6 text-5xl font-black">{a} {op} {b} = ?</div>
+      )}
+      {round > 0 && !winnerId && (
+        <div className="flex gap-2 max-w-sm mx-auto">
+          <input type="number" value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>e.key==="Enter"&&submit()} className="flex-1 border-2 border-foreground/40 rounded-lg px-3 py-2 focus:outline-none focus:border-foreground" />
+          <button onClick={submit} className="border-brutal shadow-brutal-sm rounded-lg px-4 bg-primary text-primary-foreground font-bold">送出</button>
+        </div>
+      )}
+      <button onClick={newQ} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-accent font-bold">下一題</button>
+    </div>
+  );
+}
+
+/* ───────────────────── 18. Typing Race (打字賽) ───────────────────── */
+function Typing({ room, meId, update }: GameProps) {
+  const PHRASES = [
+    "the quick brown fox jumps over the lazy dog",
+    "lovable cloud realtime games are fun",
+    "speed and accuracy win the race today",
+    "practice makes perfect typing every day",
+    "may the fastest fingers claim victory",
+  ];
+  const s = room.state as { phrase?: string; winnerId?: string | null; progress?: Record<string, number>; round?: number };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const phrase = s.phrase ?? "";
+  const progress = s.progress ?? {};
+  const winnerId = s.winnerId ?? null;
+  const round = s.round ?? 0;
+  const [val, setVal] = useState("");
+  useEffect(() => { setVal(""); }, [round]);
+
+  async function start() {
+    const p = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+    await update({ state: { phrase: p, winnerId: null, progress: {}, round: round + 1 } });
+  }
+  async function onChange(v: string) {
+    setVal(v);
+    if (winnerId || !phrase) return;
+    if (!phrase.startsWith(v)) return; // ignore typos
+    const pr = { ...progress, [meId]: v.length };
+    if (v === phrase) {
+      await update({ state: { ...s, progress: pr, winnerId: meId }, players: addScore(room.players, meId, 1) });
+    } else {
+      await update({ state: { ...s, progress: pr } });
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={winnerId ? "win" : "info"}>
+        {winnerId ? `⌨️ ${room.players.find(p=>p.client_id===winnerId)?.name} 最快打完！` : phrase ? "把句子完整輸入，輸錯字會擋住！" : "按開始抽題"}
+      </Banner>
+      {phrase && (
+        <div className="mx-auto max-w-xl border-brutal shadow-brutal-sm rounded-xl bg-card p-4 text-lg font-mono break-words">
+          <span className="text-muted-foreground">{phrase}</span>
+        </div>
+      )}
+      {phrase && !winnerId && (
+        <input value={val} onChange={(e)=>onChange(e.target.value)} className="block w-full max-w-xl mx-auto border-2 border-foreground/40 rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-foreground" placeholder="開始輸入…" />
+      )}
+      {phrase && (
+        <div className="max-w-xl mx-auto space-y-1">
+          {room.players.map(p => (
+            <div key={p.client_id} className="flex items-center gap-2 text-sm">
+              <span className="w-24 truncate">{p.avatar} {p.name}</span>
+              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${Math.min(100, ((progress[p.client_id] ?? 0) / phrase.length) * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={start} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">{phrase ? "換一題" : "開始"}</button>
+    </div>
+  );
+}
+
+/* ───────────────────── 19. Bingo ───────────────────── */
+function Bingo({ room, meId, update }: GameProps) {
+  function genCard(): number[] {
+    const all = Array.from({length: 75}, (_,i)=>i+1);
+    for (let i = all.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [all[i],all[j]]=[all[j],all[i]]; }
+    const c = all.slice(0, 25); c[12] = 0; return c; // center free
+  }
+  const s = room.state as { cards?: Record<string, number[]>; drawn?: number[]; winnerId?: string | null };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const cards = s.cards ?? {};
+  const drawn = s.drawn ?? [];
+  const winnerId = s.winnerId ?? null;
+
+  useEffect(() => {
+    if (meId === room.host_client_id) {
+      const need = room.players.filter(p => !cards[p.client_id]);
+      if (need.length) {
+        const nc = { ...cards };
+        need.forEach(p => { nc[p.client_id] = genCard(); });
+        update({ state: { ...s, cards: nc, drawn, winnerId: null } });
+      }
+    }
+  }, [room.players.length, cards]);
+
+  const myCard = cards[meId] ?? [];
+
+  function hasBingo(card: number[], drawn: number[]) {
+    const m = card.map(n => n === 0 || drawn.includes(n));
+    const lines: number[][] = [];
+    for (let r=0;r<5;r++) lines.push([0,1,2,3,4].map(c=>r*5+c));
+    for (let c=0;c<5;c++) lines.push([0,1,2,3,4].map(r=>r*5+c));
+    lines.push([0,6,12,18,24]); lines.push([4,8,12,16,20]);
+    return lines.some(l => l.every(i => m[i]));
+  }
+
+  async function draw() {
+    if (winnerId) return;
+    const remaining = Array.from({length:75}, (_,i)=>i+1).filter(n => !drawn.includes(n));
+    if (!remaining.length) return;
+    const n = remaining[Math.floor(Math.random()*remaining.length)];
+    const nd = [...drawn, n];
+    let winner: string | null = null;
+    for (const p of room.players) if (hasBingo(cards[p.client_id] ?? [], nd)) { winner = p.client_id; break; }
+    const players = winner ? addScore(room.players, winner, 1) : room.players;
+    await update({ state: { ...s, drawn: nd, winnerId: winner }, ...(winner?{players}:{}) });
+  }
+  async function reset() {
+    const nc: Record<string, number[]> = {}; room.players.forEach(p => nc[p.client_id] = genCard());
+    await update({ state: { cards: nc, drawn: [], winnerId: null } });
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={winnerId ? "win" : "info"}>
+        {winnerId ? `🎉 BINGO! ${room.players.find(p=>p.client_id===winnerId)?.name}` : `已開出 ${drawn.length} 顆　最新：${drawn[drawn.length-1] ?? "—"}`}
+      </Banner>
+      <div className="grid grid-cols-5 gap-1.5 max-w-xs mx-auto">
+        {myCard.map((n, i) => {
+          const hit = n === 0 || drawn.includes(n);
+          return <div key={i} className={`aspect-square rounded-lg border-brutal shadow-brutal-sm flex items-center justify-center font-black ${hit?"bg-accent":"bg-card"}`}>{n === 0 ? "★" : n}</div>;
+        })}
+      </div>
+      <div className="flex gap-2 justify-center">
+        <button onClick={draw} disabled={!!winnerId} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-primary text-primary-foreground font-bold disabled:opacity-40">🎱 開球</button>
+        <button onClick={reset} className="border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-secondary font-bold">重發</button>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────── 20. Hangman (吊死鬼) ───────────────────── */
+function Hangman({ room, meId, update }: GameProps) {
+  const WORDS = ["LOVABLE","REALTIME","TYPESCRIPT","CHALLENGE","KEYBOARD","SUPABASE","GAMEROOM","VICTORY","STRATEGY","COMPILER"];
+  const s = room.state as { word?: string; guessed?: string[]; wrongs?: number; winnerId?: string | null };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const word = s.word ?? "";
+  const guessed = s.guessed ?? [];
+  const wrongs = s.wrongs ?? 0;
+  const winnerId = s.winnerId ?? null;
+  const MAX = 6;
+
+  useEffect(() => {
+    if (!word && meId === room.host_client_id) {
+      update({ state: { word: WORDS[Math.floor(Math.random()*WORDS.length)], guessed: [], wrongs: 0, winnerId: null } });
+    }
+  }, [word]);
+
+  const won = word && word.split("").every(c => guessed.includes(c));
+  const lost = wrongs >= MAX;
+
+  async function pick(ch: string) {
+    if (winnerId || won || lost || guessed.includes(ch)) return;
+    const ng = [...guessed, ch];
+    const wrong = !word.includes(ch);
+    const nw = wrong ? wrongs + 1 : wrongs;
+    const justWon = word.split("").every(c => ng.includes(c));
+    if (justWon) {
+      await update({ state: { ...s, guessed: ng, wrongs: nw, winnerId: meId }, players: addScore(room.players, meId, 1) });
+    } else {
+      await update({ state: { ...s, guessed: ng, wrongs: nw } });
+    }
+  }
+  async function reset() {
+    await update({ state: { word: WORDS[Math.floor(Math.random()*WORDS.length)], guessed: [], wrongs: 0, winnerId: null } });
+  }
+
+  const display = word.split("").map(c => guessed.includes(c) ? c : "_").join(" ");
+  const parts = ["😀","😐","😟","😨","😱","💀","☠️"];
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={won ? "win" : lost ? "lose" : "info"}>
+        {won ? `🎉 解開了！答案：${word}` : lost ? `💀 失敗，答案是：${word}` : `錯誤 ${wrongs} / ${MAX}`}
+      </Banner>
+      <div className="mx-auto w-fit text-7xl">{parts[Math.min(wrongs, parts.length-1)]}</div>
+      <div className="text-center text-3xl font-mono font-black tracking-widest">{display || "—"}</div>
+      <div className="grid grid-cols-9 gap-1.5 max-w-lg mx-auto">
+        {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(c => {
+          const used = guessed.includes(c);
+          const ok = used && word.includes(c);
+          return <button key={c} onClick={()=>pick(c)} disabled={used || won || lost || !!winnerId} className={`aspect-square text-sm font-black rounded-md border-brutal shadow-brutal-sm ${used?(ok?"bg-accent":"bg-destructive/40"):"bg-card hover:translate-y-0.5 hover:shadow-none"} transition disabled:cursor-not-allowed`}>{c}</button>;
+        })}
+      </div>
+      {(won || lost) && <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>}
+    </div>
+  );
+}
