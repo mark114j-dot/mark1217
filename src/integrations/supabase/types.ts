@@ -139,6 +139,27 @@ export type Database = {
         }
         Relationships: []
       }
+      owned_avatars: {
+        Row: {
+          avatar: string
+          client_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          avatar: string
+          client_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          avatar?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           avatar: string
@@ -339,6 +360,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wallets: {
+        Row: {
+          client_id: string
+          coins: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          coins?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          coins?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
