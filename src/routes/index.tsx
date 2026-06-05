@@ -186,6 +186,21 @@ function Index() {
             🎮 進入小遊戲大廳（10 款連線遊戲）
           </a>
         </div>
+
+        <div className="mt-3 flex gap-2 justify-center">
+          <a
+            href="/arcade"
+            className="border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-card font-bold hover:translate-y-0.5 hover:shadow-none transition"
+          >
+            🕹️ 單人街機 + AI 對戰
+          </a>
+          <a
+            href="/shop"
+            className="border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-yellow-100 font-bold hover:translate-y-0.5 hover:shadow-none transition"
+          >
+            🛍️ 頭像商店
+          </a>
+        </div>
       </div>
     </main>
   );
