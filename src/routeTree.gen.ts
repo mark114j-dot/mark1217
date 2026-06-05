@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ShopRouteImport } from './routes/shop'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as FriendsRouteImport } from './routes/friends'
@@ -16,6 +17,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
+  '/shop': typeof ShopRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
+  '/shop': typeof ShopRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
+  '/shop': typeof ShopRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/friends'
     | '/games'
     | '/login'
+    | '/shop'
     | '/room/$code'
     | '/mini/$type/$code'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/friends'
     | '/games'
     | '/login'
+    | '/shop'
     | '/room/$code'
     | '/mini/$type/$code'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/friends'
     | '/games'
     | '/login'
+    | '/shop'
     | '/room/$code'
     | '/mini/$type/$code'
   fileRoutesById: FileRoutesById
@@ -104,12 +116,20 @@ export interface RootRouteChildren {
   FriendsRoute: typeof FriendsRoute
   GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
+  ShopRoute: typeof ShopRoute
   RoomCodeRoute: typeof RoomCodeRoute
   MiniTypeCodeRoute: typeof MiniTypeCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -160,9 +180,20 @@ const rootRouteChildren: RootRouteChildren = {
   FriendsRoute: FriendsRoute,
   GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
+  ShopRoute: ShopRoute,
   RoomCodeRoute: RoomCodeRoute,
   MiniTypeCodeRoute: MiniTypeCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
