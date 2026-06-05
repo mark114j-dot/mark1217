@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Copy, Users } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useMiniRoom } from "@/lib/useMiniRoom";
 import { getMiniGame } from "@/lib/miniGames";
 import { GAME_COMPONENTS } from "@/components/mini/games";
 import { toast } from "sonner";
+import { sfx } from "@/lib/sfx";
+import { SfxToggle } from "@/components/SfxToggle";
+import { addCoins } from "@/lib/wallet";
 
 export const Route = createFileRoute("/mini/$type/$code")({
   component: MiniRoomPage,
@@ -13,6 +17,27 @@ function MiniRoomPage() {
   const { type, code } = Route.useParams();
   const meta = getMiniGame(type);
   const { room, loading, error, meId, update } = useMiniRoom(code);
+  const lastScores = useRef<Record<string, number>>({});
+  const myLastScore = useRef<number>(0);
+
+  useEffect(() => {
+    if (!room) return;
+    for (const p of room.players) {
+      const prev = lastScores.current[p.client_id] ?? p.score;
+      if (p.score > prev) {
+        if (p.client_id === meId) {
+          sfx.win();
+          const delta = p.score - prev;
+          addCoins(delta * 5);
+          toast.success(`得分！+${delta * 5} 🪙`);
+          myLastScore.current = p.score;
+        } else {
+          sfx.lose();
+        }
+      }
+      lastScores.current[p.client_id] = p.score;
+    }
+  }, [room?.players, meId]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">載入中…</div>;
   if (error || !room || !meta)
@@ -47,6 +72,7 @@ function MiniRoomPage() {
           >
             {code} <Copy className="w-3.5 h-3.5" />
           </button>
+          <SfxToggle />
         </div>
 
         <div className="bg-card border-brutal shadow-brutal rounded-2xl p-3 mb-4 flex items-center gap-2 flex-wrap">
