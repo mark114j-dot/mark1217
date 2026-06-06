@@ -6,6 +6,14 @@ import { toast } from "sonner";
 import { SHOP_AVATARS, getWallet, getOwned, buyAvatar, FREE_AVATARS } from "@/lib/wallet";
 import { saveAvatar } from "@/lib/game";
 import { sfx } from "@/lib/sfx";
+import {
+  EMOTE_PACKS,
+  BOOSTERS,
+  getOwnedSkus,
+  buyEmotePack,
+  buySku,
+  isEmotePackOwned,
+} from "@/lib/items";
 
 export const Route = createFileRoute("/shop")({
   component: Shop,
@@ -19,17 +27,24 @@ const RARITY_STYLE: Record<string, string> = {
   legendary: "from-amber-200 to-orange-100 border-amber-500",
 };
 
+type Tab = "avatars" | "emotes" | "boosters";
+
 function Shop() {
   const [coins, setCoins] = useState(0);
   const [owned, setOwned] = useState<string[]>(FREE_AVATARS);
   const [busy, setBusy] = useState<string | null>(null);
+  const [skus, setSkus] = useState<Set<string>>(new Set());
+  const [tab, setTab] = useState<Tab>("avatars");
+
+  async function refresh() {
+    const w = await getWallet();
+    setCoins(w.coins);
+    setOwned(await getOwned());
+    setSkus(await getOwnedSkus());
+  }
 
   useEffect(() => {
-    (async () => {
-      const w = await getWallet();
-      setCoins(w.coins);
-      setOwned(await getOwned());
-    })();
+    refresh();
   }, []);
 
   async function purchase(emoji: string) {
@@ -53,6 +68,28 @@ function Shop() {
     toast.success(`已裝備 ${emoji}`);
   }
 
+  async function purchasePack(packId: string) {
+    const pack = EMOTE_PACKS.find((p) => p.id === packId);
+    if (!pack) return;
+    setBusy(`pack:${packId}`);
+    const res = await buyEmotePack(pack);
+    setBusy(null);
+    if (!res.ok) { sfx.lose(); toast.error(res.reason ?? "購買失敗"); return; }
+    sfx.coin();
+    toast.success(`解鎖「${pack.name}」表情組！遊戲中按右下角 😀 送出`);
+    await refresh();
+  }
+
+  async function purchaseBooster(sku: string, price: number, name: string) {
+    setBusy(sku);
+    const res = await buySku(sku, price);
+    setBusy(null);
+    if (!res.ok) { sfx.lose(); toast.error(res.reason ?? "購買失敗"); return; }
+    sfx.level();
+    toast.success(`啟用「${name}」！`);
+    await refresh();
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
@@ -67,8 +104,25 @@ function Shop() {
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4">玩遊戲贏取金幣 → 解鎖稀有頭像 → 點「裝備」套用</p>
+        <p className="text-sm text-muted-foreground mb-4">玩遊戲贏金幣 → 解鎖頭像 / 表情 / 加倍器 → 戰場上嗆翻對手</p>
 
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {([
+            ["avatars", "🐱 頭像"],
+            ["emotes", "😀 表情"],
+            ["boosters", "💰 加倍 / 道具"],
+          ] as [Tab, string][]).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={`border-brutal shadow-brutal-sm rounded-xl px-4 py-1.5 font-bold text-sm transition ${tab === k ? "bg-primary text-primary-foreground" : "bg-card hover:translate-y-0.5 hover:shadow-none"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "avatars" && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
           {SHOP_AVATARS.map((a, i) => {
             const isOwned = owned.includes(a.emoji);
@@ -103,6 +157,66 @@ function Shop() {
             );
           })}
         </div>
+        )}
+
+        {tab === "emotes" && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            {EMOTE_PACKS.map((pack) => {
+              const ownedAll = isEmotePackOwned(pack, skus);
+              const owns = pack.emotes.filter((e) => skus.has(`emote:${e}`)).length;
+              const canAfford = coins >= pack.price;
+              return (
+                <div key={pack.id} className="border-brutal shadow-brutal rounded-2xl p-4 bg-card">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-display font-black text-lg flex items-center gap-2">
+                      <span className="text-3xl">{pack.emoji}</span>{pack.name}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{owns}/{pack.emotes.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {pack.emotes.map((e) => (
+                      <span key={e} className={`text-2xl px-1.5 py-0.5 rounded-md border-2 ${skus.has(`emote:${e}`) ? "border-accent bg-accent/30" : "border-foreground/20 bg-card opacity-80"}`}>{e}</span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => purchasePack(pack.id)}
+                    disabled={ownedAll || !canAfford || busy === `pack:${pack.id}`}
+                    className="w-full border-2 border-foreground rounded-lg py-2 text-sm font-bold bg-primary text-primary-foreground disabled:opacity-50 hover:translate-y-0.5"
+                  >
+                    {ownedAll ? "✓ 已全部解鎖" : busy === `pack:${pack.id}` ? "…" : `解鎖整組 ${pack.price} 🪙`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab === "boosters" && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            {BOOSTERS.map((b) => {
+              const owned = skus.has(b.sku);
+              const canAfford = coins >= b.price;
+              return (
+                <div key={b.id} className="border-brutal shadow-brutal rounded-2xl p-4 bg-gradient-to-br from-yellow-100 to-amber-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="text-5xl">{b.emoji}</div>
+                    <div>
+                      <div className="font-display font-black text-lg">{b.name}</div>
+                      <div className="text-xs text-muted-foreground">{b.desc}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => purchaseBooster(b.sku, b.price, b.name)}
+                    disabled={owned || !canAfford || busy === b.sku}
+                    className="w-full border-2 border-foreground rounded-lg py-2 text-sm font-bold bg-foreground text-background disabled:opacity-50 hover:translate-y-0.5"
+                  >
+                    {owned ? "✓ 已啟用" : busy === b.sku ? "…" : `購買 ${b.price} 🪙`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="mt-8 text-center text-xs text-muted-foreground">
           想多賺金幣？前往
