@@ -28,6 +28,9 @@ export const MINI_GAMES: MiniGameMeta[] = [
   { id: "typing", name: "打字賽", emoji: "⌨️", desc: "最快輸入完成者勝", players: "2-4 人", color: "#8b5cf6" },
   { id: "bingo", name: "賓果", emoji: "🎱", desc: "連成一線喊 BINGO", players: "2-4 人", color: "#f43f5e" },
   { id: "hangman", name: "吊死鬼", emoji: "💀", desc: "猜字母拯救小人", players: "2-4 人", color: "#111827" },
+  { id: "speedsum", name: "心算閃電戰", emoji: "⚡", desc: "最快算對加 1 分", players: "2-4 人", color: "#fb7185" },
+  { id: "dicepoker", name: "骰子撲克", emoji: "🎰", desc: "三回合骰大牌", players: "2-4 人", color: "#16a34a" },
+  { id: "oddone", name: "找不同", emoji: "🔍", desc: "找出唯一的差異", players: "2-4 人", color: "#0891b2" },
 ];
 
 export function getMiniGame(id: string) {

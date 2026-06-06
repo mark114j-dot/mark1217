@@ -647,6 +647,9 @@ export const GAME_COMPONENTS: Record<string, (p: GameProps) => ReactElement> = {
   typing: Typing,
   bingo: Bingo,
   hangman: Hangman,
+  speedsum: SpeedSum,
+  dicepoker: DicePoker,
+  oddone: OddOne,
 };
 
 /* ───────────────────── 11. QuickDraw (牛仔對決) ───────────────────── */
@@ -1208,6 +1211,265 @@ function Hangman({ room, meId, update }: GameProps) {
         })}
       </div>
       {(won || lost) && <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 21. SpeedSum (心算閃電戰) ───────────────────── */
+function SpeedSum({ room, meId, update }: GameProps) {
+  const s = room.state as { a?: number; b?: number; op?: "+"|"-"|"×"; round?: number; max?: number; lastWinner?: string | null };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const round = s.round ?? 0;
+  const max = s.max ?? 10;
+  const [guess, setGuess] = useState("");
+
+  function gen() {
+    const ops: ("+"|"-"|"×")[] = ["+", "-", "×"];
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    const a = op === "×" ? 2 + Math.floor(Math.random()*11) : 10 + Math.floor(Math.random()*89);
+    const b = op === "×" ? 2 + Math.floor(Math.random()*11) : 1 + Math.floor(Math.random()*Math.max(2, a-1));
+    return { a, b, op };
+  }
+
+  useEffect(() => {
+    if (s.a == null && meId === room.host_client_id) {
+      update({ state: { ...gen(), round: 1, max, lastWinner: null } });
+    }
+  }, [s.a]);
+
+  const answer = s.op === "+" ? (s.a! + s.b!) : s.op === "-" ? (s.a! - s.b!) : (s.a! * s.b!);
+  const done = round >= max && s.lastWinner !== undefined && round > max - 1 && s.a == null;
+
+  async function submit() {
+    if (!guess || s.a == null) return;
+    const n = parseInt(guess, 10);
+    setGuess("");
+    if (n === answer) {
+      const newRound = round + 1;
+      const players = addScore(room.players, meId, 1);
+      if (newRound > max) {
+        await update({ state: { round: newRound, max, lastWinner: meId, a: undefined, b: undefined, op: undefined }, players });
+      } else {
+        await update({ state: { ...gen(), round: newRound, max, lastWinner: meId }, players });
+      }
+    } else {
+      sfx.lose();
+    }
+  }
+
+  async function reset() {
+    await update({ state: { ...gen(), round: 1, max, lastWinner: null } });
+  }
+
+  if (s.a == null && round > 0) {
+    const winner = room.players.slice().sort((a,b)=>b.score-a.score)[0];
+    return (
+      <div className="space-y-3">
+        <Banner tone="win">🏆 結束！{winner.name} 領先（{winner.score}）</Banner>
+        <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone="info">第 {round} / {max} 題　{s.lastWinner ? `${room.players.find(p=>p.client_id===s.lastWinner)?.name} 上題 +1` : "搶答！"}</Banner>
+      <div className="text-center text-6xl font-display font-black my-6">
+        {s.a} {s.op} {s.b} = ?
+      </div>
+      <div className="flex gap-2 justify-center max-w-xs mx-auto">
+        <input
+          value={guess}
+          onChange={(e) => setGuess(e.target.value.replace(/[^\-0-9]/g, ""))}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          inputMode="numeric"
+          className="border-brutal shadow-brutal-sm rounded-xl px-3 py-2 text-center text-2xl font-mono font-black flex-1 bg-card"
+          placeholder="?"
+          autoFocus
+        />
+        <button onClick={submit} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-primary text-primary-foreground font-bold">送出</button>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────── 22. DicePoker (骰子撲克) ───────────────────── */
+function DicePoker({ room, meId, update }: GameProps) {
+  type Roll = { dice: number[]; rerolls: number; done: boolean };
+  const s = room.state as { rolls?: Record<string, Roll>; round?: number; max?: number; finishedAt?: number | null };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const rolls = s.rolls ?? {};
+  const round = s.round ?? 1;
+  const max = s.max ?? 3;
+  const mine: Roll = rolls[meId] ?? { dice: [0,0,0,0,0], rerolls: 2, done: false };
+  const [keep, setKeep] = useState<boolean[]>([false,false,false,false,false]);
+
+  function rollDice() {
+    return Array.from({ length: 5 }, () => 1 + Math.floor(Math.random()*6));
+  }
+  function scoreHand(d: number[]) {
+    const counts: Record<number, number> = {};
+    d.forEach(n => counts[n] = (counts[n]||0)+1);
+    const vals = Object.values(counts).sort((a,b)=>b-a);
+    const sum = d.reduce((a,b)=>a+b,0);
+    if (vals[0] === 5) return 100 + sum; // five of a kind
+    if (vals[0] === 4) return 80 + sum;
+    if (vals[0] === 3 && vals[1] === 2) return 70 + sum;
+    const sorted = [...new Set(d)].sort((a,b)=>a-b);
+    const straight = sorted.length === 5 && (sorted[4]-sorted[0] === 4);
+    if (straight) return 60 + sum;
+    if (vals[0] === 3) return 40 + sum;
+    if (vals[0] === 2 && vals[1] === 2) return 30 + sum;
+    if (vals[0] === 2) return 15 + sum;
+    return sum;
+  }
+
+  async function roll() {
+    if (mine.done) return;
+    let dice: number[];
+    let rerolls = mine.rerolls;
+    if (mine.dice.every(d => d === 0)) {
+      dice = rollDice();
+    } else {
+      if (rerolls <= 0) return;
+      dice = mine.dice.map((d, i) => keep[i] ? d : 1 + Math.floor(Math.random()*6));
+      rerolls -= 1;
+    }
+    const done = rerolls <= 0;
+    sfx.pop();
+    await update({ state: { ...s, rolls: { ...rolls, [meId]: { dice, rerolls, done } } } });
+    setKeep([false,false,false,false,false]);
+  }
+
+  async function stand() {
+    if (mine.dice.every(d=>d===0)) return;
+    await update({ state: { ...s, rolls: { ...rolls, [meId]: { ...mine, done: true } } } });
+  }
+
+  const allDone = room.players.every(p => rolls[p.client_id]?.done);
+  useEffect(() => {
+    if (allDone && meId === room.host_client_id && s.finishedAt !== round) {
+      const scored = room.players.map(p => ({ id: p.client_id, sc: scoreHand(rolls[p.client_id].dice) }));
+      const best = Math.max(...scored.map(x => x.sc));
+      const winners = scored.filter(x => x.sc === best).map(x => x.id);
+      let players = room.players;
+      winners.forEach(id => { players = addScore(players, id, 1); });
+      sfx.win();
+      update({ state: { ...s, finishedAt: round }, players });
+    }
+  }, [allDone, round]);
+
+  async function nextRound() {
+    const nr = round + 1;
+    if (nr > max) {
+      await update({ state: { rolls: {}, round: 1, max, finishedAt: null } });
+    } else {
+      await update({ state: { rolls: {}, round: nr, max, finishedAt: null } });
+    }
+  }
+
+  const FACES = ["⚀","⚁","⚂","⚃","⚄","⚅"];
+  return (
+    <div className="space-y-3">
+      <Banner tone={allDone ? "win" : "info"}>
+        第 {round} / {max} 回合　{allDone ? `本回合最佳：${room.players.slice().sort((a,b)=>scoreHand(rolls[b.client_id].dice)-scoreHand(rolls[a.client_id].dice))[0].name}` : "擲骰、保留、再擲（最多 2 次）"}
+      </Banner>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {room.players.map(p => {
+          const r = rolls[p.client_id];
+          const me = p.client_id === meId;
+          return (
+            <div key={p.client_id} className={`border-brutal shadow-brutal-sm rounded-2xl p-3 bg-card ${me?"ring-4 ring-primary/40":""}`}>
+              <div className="flex items-center justify-between text-xs mb-2"><span className="font-bold">{p.avatar} {p.name}{me?" (你)":""}</span><span className="text-muted-foreground">{r?.done ? `分 ${scoreHand(r.dice)}` : r ? `剩 ${r.rerolls} 次` : "未擲"}</span></div>
+              <div className="flex gap-1 justify-center text-5xl">
+                {(r?.dice ?? [0,0,0,0,0]).map((d, i) => (
+                  me && !r?.done && d !== 0 ? (
+                    <button key={i} onClick={() => setKeep(k => k.map((v,j)=>j===i?!v:v))} className={`px-1 rounded ${keep[i]?"bg-accent":""}`}>{FACES[d-1]}</button>
+                  ) : (
+                    <span key={i} className="opacity-90">{d===0?"❓":FACES[d-1]}</span>
+                  )
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {!mine.done && (
+        <div className="flex gap-2 justify-center">
+          <button onClick={roll} disabled={mine.dice[0]!==0 && mine.rerolls<=0} className="border-brutal shadow-brutal-sm rounded-xl px-5 py-2 bg-primary text-primary-foreground font-bold disabled:opacity-40">{mine.dice[0]===0?"🎲 開擲":`🔁 重擲未保留 (${mine.rerolls})`}</button>
+          {mine.dice[0]!==0 && <button onClick={stand} className="border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-secondary font-bold">不換 / 結算</button>}
+        </div>
+      )}
+      {allDone && <button onClick={nextRound} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">下一回合</button>}
+    </div>
+  );
+}
+
+/* ───────────────────── 23. OddOne (找不同) ───────────────────── */
+function OddOne({ room, meId, update }: GameProps) {
+  const POOL = ["🍎","🍊","🍇","🍓","🍒","🍉","🍌","🍑","🥝","🥥","🍍","🥭","🍐","🍋","🫐"];
+  const s = room.state as { grid?: string[]; oddIdx?: number; round?: number; max?: number; lastWinner?: string | null };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const round = s.round ?? 1;
+  const max = s.max ?? 10;
+
+  function gen() {
+    const base = POOL[Math.floor(Math.random()*POOL.length)];
+    let odd = base;
+    while (odd === base) odd = POOL[Math.floor(Math.random()*POOL.length)];
+    const size = 36;
+    const grid = Array(size).fill(base);
+    const oddIdx = Math.floor(Math.random()*size);
+    grid[oddIdx] = odd;
+    return { grid, oddIdx };
+  }
+
+  useEffect(() => {
+    if (!s.grid && meId === room.host_client_id) {
+      update({ state: { ...gen(), round: 1, max, lastWinner: null } });
+    }
+  }, [s.grid]);
+
+  async function tap(i: number) {
+    if (!s.grid) return;
+    if (i === s.oddIdx) {
+      sfx.score();
+      const nr = round + 1;
+      const players = addScore(room.players, meId, 1);
+      if (nr > max) {
+        await update({ state: { grid: undefined, oddIdx: undefined, round: nr, max, lastWinner: meId }, players });
+      } else {
+        await update({ state: { ...gen(), round: nr, max, lastWinner: meId }, players });
+      }
+    } else {
+      sfx.lose();
+      const players = addScore(room.players, meId, -1);
+      await update({ state: { ...s }, players });
+    }
+  }
+
+  async function reset() { await update({ state: { ...gen(), round: 1, max, lastWinner: null } }); }
+
+  if (!s.grid && round > 0) {
+    const winner = room.players.slice().sort((a,b)=>b.score-a.score)[0];
+    return (
+      <div className="space-y-3">
+        <Banner tone="win">🏆 {winner.name} 最眼利！（{winner.score}）</Banner>
+        <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone="info">第 {round} / {max} 題　{s.lastWinner ? `${room.players.find(p=>p.client_id===s.lastWinner)?.name} 上題搶分` : "找出唯一不同的！點錯 -1"}</Banner>
+      <div className="grid grid-cols-6 gap-1 max-w-md mx-auto">
+        {(s.grid ?? []).map((c, i) => (
+          <button key={i} onClick={() => tap(i)} className="aspect-square text-3xl border-2 border-foreground/10 rounded-lg bg-card hover:bg-secondary/50 hover:scale-105 transition">
+            {c}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

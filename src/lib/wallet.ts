@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getClientId } from "@/lib/game";
+import { hasBooster } from "@/lib/items";
 
 export type ShopAvatar = { emoji: string; price: number; rarity: "common" | "rare" | "epic" | "legendary" };
 
@@ -44,6 +45,14 @@ export async function addCoins(delta: number) {
   const next = Math.max(0, coins + delta);
   await supabase.from("wallets").update({ coins: next }).eq("client_id", id);
   return next;
+}
+
+/** Apply the permanent 2x doubler if owned, then credit coins. */
+export async function awardCoins(delta: number): Promise<{ coins: number; doubled: boolean; gained: number }> {
+  const doubled = delta > 0 && (await hasBooster("boost:doubler"));
+  const gained = doubled ? delta * 2 : delta;
+  const coins = await addCoins(gained);
+  return { coins, doubled, gained };
 }
 
 export async function getOwned(): Promise<string[]> {

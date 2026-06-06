@@ -7,7 +7,8 @@ import { GAME_COMPONENTS } from "@/components/mini/games";
 import { toast } from "sonner";
 import { sfx } from "@/lib/sfx";
 import { SfxToggle } from "@/components/SfxToggle";
-import { addCoins } from "@/lib/wallet";
+import { awardCoins } from "@/lib/wallet";
+import { EmoteBar } from "@/components/EmoteBar";
 
 export const Route = createFileRoute("/mini/$type/$code")({
   component: MiniRoomPage,
@@ -28,8 +29,9 @@ function MiniRoomPage() {
         if (p.client_id === meId) {
           sfx.win();
           const delta = p.score - prev;
-          addCoins(delta * 5);
-          toast.success(`得分！+${delta * 5} 🪙`);
+        awardCoins(delta * 5).then(({ gained, doubled }) => {
+          toast.success(`得分！+${gained} 🪙${doubled ? "（加倍器 x2）" : ""}`);
+        });
           myLastScore.current = p.score;
         } else {
           sfx.lose();
@@ -95,6 +97,7 @@ function MiniRoomPage() {
           <div className="text-center py-12 text-muted-foreground">遊戲尚未上線</div>
         )}
       </div>
+      <EmoteBar room={room} meId={meId} update={update} />
     </div>
   );
 }
