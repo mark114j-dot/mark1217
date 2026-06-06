@@ -647,6 +647,9 @@ export const GAME_COMPONENTS: Record<string, (p: GameProps) => ReactElement> = {
   typing: Typing,
   bingo: Bingo,
   hangman: Hangman,
+  speedsum: SpeedSum,
+  dicepoker: DicePoker,
+  oddone: OddOne,
 };
 
 /* ───────────────────── 11. QuickDraw (牛仔對決) ───────────────────── */
