@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          id: string
+          target: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           content: string
@@ -65,6 +92,107 @@ export type Database = {
           requester_id?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      game_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          game_id: string
+          id: string
+          note: string
+          spec: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          game_id: string
+          id?: string
+          note?: string
+          spec: Json
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          game_id?: string
+          id?: string
+          note?: string
+          spec?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_versions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          category: string
+          cover_color: string
+          created_at: string
+          created_by: string | null
+          description: string
+          emoji: string
+          id: string
+          max_players: number
+          min_players: number
+          modes: Json
+          name: string
+          primitive: string
+          slug: string
+          spec: Json
+          status: string
+          tags: string[]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          category?: string
+          cover_color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          emoji?: string
+          id?: string
+          max_players?: number
+          min_players?: number
+          modes?: Json
+          name: string
+          primitive?: string
+          slug: string
+          spec?: Json
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          category?: string
+          cover_color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          emoji?: string
+          id?: string
+          max_players?: number
+          min_players?: number
+          modes?: Json
+          name?: string
+          primitive?: string
+          slug?: string
+          spec?: Json
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -361,6 +489,74 @@ export type Database = {
           },
         ]
       }
+      studio_sessions: {
+        Row: {
+          created_at: string
+          draft_spec: Json
+          folder: string
+          game_id: string | null
+          id: string
+          messages: Json
+          owner_id: string
+          progress: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          draft_spec?: Json
+          folder?: string
+          game_id?: string | null
+          id?: string
+          messages?: Json
+          owner_id: string
+          progress?: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          draft_spec?: Json
+          folder?: string
+          game_id?: string | null
+          id?: string
+          messages?: Json
+          owner_id?: string
+          progress?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_sessions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallets: {
         Row: {
           client_id: string
@@ -387,10 +583,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -517,6 +719,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
