@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GamesRouteImport } from './routes/games'
@@ -18,6 +19,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
+  '/studio': typeof StudioRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
+  '/studio': typeof StudioRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/games': typeof GamesRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
+  '/studio': typeof StudioRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/login'
     | '/shop'
+    | '/studio'
     | '/room/$code'
     | '/mini/$type/$code'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/login'
     | '/shop'
+    | '/studio'
     | '/room/$code'
     | '/mini/$type/$code'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/games'
     | '/login'
     | '/shop'
+    | '/studio'
     | '/room/$code'
     | '/mini/$type/$code'
   fileRoutesById: FileRoutesById
@@ -130,12 +142,20 @@ export interface RootRouteChildren {
   GamesRoute: typeof GamesRoute
   LoginRoute: typeof LoginRoute
   ShopRoute: typeof ShopRoute
+  StudioRoute: typeof StudioRoute
   RoomCodeRoute: typeof RoomCodeRoute
   MiniTypeCodeRoute: typeof MiniTypeCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop': {
       id: '/shop'
       path: '/shop'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   GamesRoute: GamesRoute,
   LoginRoute: LoginRoute,
   ShopRoute: ShopRoute,
+  StudioRoute: StudioRoute,
   RoomCodeRoute: RoomCodeRoute,
   MiniTypeCodeRoute: MiniTypeCodeRoute,
 }
