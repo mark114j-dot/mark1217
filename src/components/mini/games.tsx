@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import type { MiniRoom, MiniPlayer } from "@/lib/useMiniRoom";
+import { sfx } from "@/lib/sfx";
 
 type GameProps = {
   room: MiniRoom;
