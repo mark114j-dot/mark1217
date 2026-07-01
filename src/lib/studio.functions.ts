@@ -90,7 +90,7 @@ export const updateSession = createServerFn({ method: "POST" })
   }) => d)
   .handler(async ({ data, context }) => {
     await ensureAdmin(context);
-    const patch: Record<string, unknown> = {};
+    const patch: any = {};
     for (const k of ["title", "folder", "messages", "draft_spec", "progress"] as const) {
       if (data[k] !== undefined) patch[k] = data[k];
     }
@@ -160,7 +160,7 @@ export const publishSession = createServerFn({ method: "POST" })
           description: spec.description ?? "",
           category: spec.category ?? "misc",
           primitive: spec.primitive ?? "custom",
-          spec, min_players: spec.min_players ?? 1,
+          spec: spec as any, min_players: spec.min_players ?? 1,
           max_players: spec.max_players ?? 4,
           status: "published",
         }).eq("id", gameId);
@@ -173,7 +173,7 @@ export const publishSession = createServerFn({ method: "POST" })
           description: spec.description ?? "",
           category: spec.category ?? "misc",
           primitive: spec.primitive ?? "custom",
-          spec, min_players: spec.min_players ?? 1,
+          spec: spec as any, min_players: spec.min_players ?? 1,
           max_players: spec.max_players ?? 4,
           status: "published", version: 1,
           created_by: context.userId,
@@ -187,7 +187,7 @@ export const publishSession = createServerFn({ method: "POST" })
       .order("version", { ascending: false }).limit(1);
     const nextV = (vRows?.[0]?.version ?? 0) + 1;
     await context.supabase.from("game_versions").insert({
-      game_id: gameId, version: nextV, spec, note: "Studio 發布",
+      game_id: gameId, version: nextV, spec: spec as any, note: "Studio 發布",
       created_by: context.userId,
     });
 
