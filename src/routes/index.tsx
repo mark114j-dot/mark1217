@@ -201,6 +201,16 @@ function Index() {
             🛍️ 頭像商店
           </a>
         </div>
+
+        <div className="mt-3 text-center">
+          <a
+            href="/studio"
+            className="inline-block border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-gradient-to-r from-fuchsia-200 to-cyan-200 font-bold hover:translate-y-0.5 hover:shadow-none transition"
+          >
+            ✨ AI 遊戲工作室（Beta）
+          </a>
+          <div className="text-[10px] text-muted-foreground mt-1">管理員專用 · 用聊天做遊戲</div>
+        </div>
       </div>
     </main>
   );
