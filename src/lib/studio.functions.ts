@@ -27,6 +27,10 @@ export type StudioDraftSpec = {
   ui?: string[];
   levels?: number;
   extras?: Record<string, unknown>;
+  html_content?: string;
+  play_url?: string;
+  cover_image_url?: string;
+  instructions?: string;
 };
 
 async function ensureAdmin(ctx: { supabase: any; userId: string }) {
@@ -151,6 +155,9 @@ export const publishSession = createServerFn({ method: "POST" })
     if (e1) throw new Error(e1.message);
     const spec = (s.draft_spec ?? {}) as StudioDraftSpec;
     if (!spec.name) throw new Error("尚未完成基本設定：缺少遊戲名稱");
+    if (!spec.html_content && !spec.play_url) {
+      throw new Error("尚未上傳遊戲內容：請提供遊戲 HTML 或外部連結");
+    }
 
     let gameId = s.game_id;
     if (gameId) {
@@ -162,6 +169,10 @@ export const publishSession = createServerFn({ method: "POST" })
           primitive: spec.primitive ?? "custom",
           spec: spec as any, min_players: spec.min_players ?? 1,
           max_players: spec.max_players ?? 4,
+          html_content: spec.html_content ?? null,
+          play_url: spec.play_url ?? null,
+          cover_image_url: spec.cover_image_url ?? null,
+          instructions: spec.instructions ?? null,
           status: "published",
         }).eq("id", gameId);
       if (eu) throw new Error(eu.message);
@@ -175,6 +186,10 @@ export const publishSession = createServerFn({ method: "POST" })
           primitive: spec.primitive ?? "custom",
           spec: spec as any, min_players: spec.min_players ?? 1,
           max_players: spec.max_players ?? 4,
+          html_content: spec.html_content ?? null,
+          play_url: spec.play_url ?? null,
+          cover_image_url: spec.cover_image_url ?? null,
+          instructions: spec.instructions ?? null,
           status: "published", version: 1,
           created_by: context.userId,
         }).select().single();

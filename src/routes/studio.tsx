@@ -425,6 +425,112 @@ function StudioWorkspace() {
               </div>
             )}
 
+            <div className="pt-2 border-t border-foreground/15">
+              <div className="text-xs text-muted-foreground mb-1 font-bold">🎮 遊戲內容（發布必填）</div>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <label className="block text-muted-foreground mb-0.5">外部遊戲連結（optional）</label>
+                  <input
+                    type="url"
+                    value={spec.play_url ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setSpec((s) => ({ ...s, play_url: v }));
+                      persistSession({ draft_spec: { ...spec, play_url: v } });
+                    }}
+                    placeholder="https://example.com/game"
+                    className="w-full border-brutal rounded px-2 py-1 bg-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground mb-0.5">或上傳/貼上 HTML 遊戲檔案</label>
+                  <div className="flex gap-1 mb-1">
+                    <label className="cursor-pointer border-brutal rounded px-2 py-1 bg-card hover:bg-muted text-[11px]">
+                      📁 選擇 .html 檔
+                      <input
+                        type="file"
+                        accept=".html,.htm,text/html"
+                        hidden
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          if (f.size > 2 * 1024 * 1024) { toast.error("HTML 超過 2MB"); return; }
+                          const text = await f.text();
+                          setSpec((s) => ({ ...s, html_content: text }));
+                          persistSession({ draft_spec: { ...spec, html_content: text } });
+                          toast.success(`已載入 ${f.name}`);
+                        }}
+                      />
+                    </label>
+                    {spec.html_content && (
+                      <button
+                        onClick={() => {
+                          setSpec((s) => ({ ...s, html_content: undefined }));
+                          persistSession({ draft_spec: { ...spec, html_content: undefined } });
+                        }}
+                        className="text-destructive text-[11px] underline"
+                      >清除</button>
+                    )}
+                  </div>
+                  <textarea
+                    value={spec.html_content ?? ""}
+                    onChange={(e) => setSpec((s) => ({ ...s, html_content: e.target.value }))}
+                    onBlur={() => persistSession({ draft_spec: spec })}
+                    placeholder="<!doctype html><html>...</html>"
+                    rows={4}
+                    className="w-full border-brutal rounded px-2 py-1 bg-input font-mono text-[10px]"
+                  />
+                  {spec.html_content && (
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      已載入 {(spec.html_content.length / 1024).toFixed(1)} KB
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-muted-foreground mb-0.5">封面圖片 URL</label>
+                  <input
+                    type="url"
+                    value={spec.cover_image_url ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setSpec((s) => ({ ...s, cover_image_url: v }));
+                    }}
+                    onBlur={() => persistSession({ draft_spec: spec })}
+                    placeholder="https://…/cover.png"
+                    className="w-full border-brutal rounded px-2 py-1 bg-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground mb-0.5">玩法說明</label>
+                  <textarea
+                    value={spec.instructions ?? ""}
+                    onChange={(e) => setSpec((s) => ({ ...s, instructions: e.target.value }))}
+                    onBlur={() => persistSession({ draft_spec: spec })}
+                    placeholder="按空白鍵跳躍…"
+                    rows={2}
+                    className="w-full border-brutal rounded px-2 py-1 bg-input"
+                  />
+                </div>
+                {(spec.html_content || spec.play_url) && (
+                  <a
+                    href={spec.play_url || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      if (!spec.play_url && spec.html_content) {
+                        e.preventDefault();
+                        const w = window.open("about:blank");
+                        if (w) { w.document.open(); w.document.write(spec.html_content); w.document.close(); }
+                      }
+                    }}
+                    className="block text-center border-brutal shadow-brutal-sm rounded bg-secondary text-secondary-foreground py-1 font-bold hover:translate-y-0.5 hover:shadow-none transition"
+                  >
+                    👁️ 預覽遊戲
+                  </a>
+                )}
+              </div>
+            </div>
+
             <div className="pt-2 border-t border-foreground/15 space-y-2">
               {readyBuild && (
                 <div className="text-xs bg-accent/30 border border-accent rounded-lg p-2">
@@ -433,11 +539,11 @@ function StudioWorkspace() {
               )}
               <button
                 onClick={handlePublish}
-                disabled={publishing || !spec.name}
+                disabled={publishing || !spec.name || (!spec.html_content && !spec.play_url)}
                 className={`w-full border-brutal shadow-brutal-sm rounded-xl font-display font-bold py-2 transition disabled:opacity-40 disabled:cursor-not-allowed ${
                   readyPublish ? "bg-accent text-accent-foreground animate-pulse" : "bg-primary text-primary-foreground"
                 } hover:translate-y-0.5 hover:shadow-none`}
-                title={!spec.name ? "缺少遊戲名稱" : ""}
+                title={!spec.name ? "缺少遊戲名稱" : (!spec.html_content && !spec.play_url) ? "請上傳遊戲 HTML 或填入外部連結" : ""}
               >
                 {publishing ? "發布中…" : "🚀 發布遊戲"}
               </button>
