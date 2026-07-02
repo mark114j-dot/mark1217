@@ -17,6 +17,7 @@ import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as ArcadeRouteImport } from './routes/arcade'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
+import { Route as PlaySlugRouteImport } from './routes/play.$slug'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
 const StudioRoute = StudioRouteImport.update({
@@ -59,6 +60,11 @@ const RoomCodeRoute = RoomCodeRouteImport.update({
   path: '/room/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlaySlugRoute = PlaySlugRouteImport.update({
+  id: '/play/$slug',
+  path: '/play/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MiniTypeCodeRoute = MiniTypeCodeRouteImport.update({
   id: '/mini/$type/$code',
   path: '/mini/$type/$code',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
+  '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
+  '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
+  '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/shop'
     | '/studio'
+    | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/shop'
     | '/studio'
+    | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/shop'
     | '/studio'
+    | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ShopRoute: typeof ShopRoute
   StudioRoute: typeof StudioRoute
+  PlaySlugRoute: typeof PlaySlugRoute
   RoomCodeRoute: typeof RoomCodeRoute
   MiniTypeCodeRoute: typeof MiniTypeCodeRoute
 }
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play/$slug': {
+      id: '/play/$slug'
+      path: '/play/$slug'
+      fullPath: '/play/$slug'
+      preLoaderRoute: typeof PlaySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mini/$type/$code': {
       id: '/mini/$type/$code'
       path: '/mini/$type/$code'
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ShopRoute: ShopRoute,
   StudioRoute: StudioRoute,
+  PlaySlugRoute: PlaySlugRoute,
   RoomCodeRoute: RoomCodeRoute,
   MiniTypeCodeRoute: MiniTypeCodeRoute,
 }
