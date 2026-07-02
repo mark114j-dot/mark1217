@@ -137,15 +137,19 @@ export type Database = {
         Row: {
           category: string
           cover_color: string
+          cover_image_url: string | null
           created_at: string
           created_by: string | null
           description: string
           emoji: string
+          html_content: string | null
           id: string
+          instructions: string | null
           max_players: number
           min_players: number
           modes: Json
           name: string
+          play_url: string | null
           primitive: string
           slug: string
           spec: Json
@@ -157,15 +161,19 @@ export type Database = {
         Insert: {
           category?: string
           cover_color?: string
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
           emoji?: string
+          html_content?: string | null
           id?: string
+          instructions?: string | null
           max_players?: number
           min_players?: number
           modes?: Json
           name: string
+          play_url?: string | null
           primitive?: string
           slug: string
           spec?: Json
@@ -177,15 +185,19 @@ export type Database = {
         Update: {
           category?: string
           cover_color?: string
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
           emoji?: string
+          html_content?: string | null
           id?: string
+          instructions?: string | null
           max_players?: number
           min_players?: number
           modes?: Json
           name?: string
+          play_url?: string | null
           primitive?: string
           slug?: string
           spec?: Json
