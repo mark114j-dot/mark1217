@@ -22,10 +22,19 @@ function GamesHub() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [customGames, setCustomGames] = useState<any[]>([]);
 
   useEffect(() => {
     getClientId();
     setName(getSavedName());
+    (async () => {
+      const { data } = await supabase
+        .from("games")
+        .select("id,slug,name,emoji,description,cover_image_url,html_content,play_url")
+        .eq("status", "published")
+        .order("created_at", { ascending: false });
+      setCustomGames((data ?? []).filter((g: any) => g.html_content || g.play_url));
+    })();
   }, []);
 
   async function createRoom(gameId: string) {
@@ -111,6 +120,30 @@ function GamesHub() {
             </motion.button>
           ))}
         </div>
+
+        {customGames.length > 0 && (
+          <>
+            <h2 className="font-display text-2xl font-black mt-8 mb-3">🛠️ 工作室發布</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {customGames.map((g, i) => (
+                <Link
+                  key={g.id}
+                  to="/play/$slug"
+                  params={{ slug: g.slug }}
+                  className="border-brutal shadow-brutal rounded-2xl p-4 bg-card hover:translate-y-1 hover:shadow-none transition text-left overflow-hidden"
+                >
+                  {g.cover_image_url ? (
+                    <img src={g.cover_image_url} alt="" className="w-full h-24 object-cover rounded mb-2" />
+                  ) : (
+                    <div className="text-4xl mb-2">{g.emoji ?? "🎮"}</div>
+                  )}
+                  <div className="font-display font-bold text-base truncate">{g.name}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">{g.description}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
 
         <p className="text-xs text-muted-foreground text-center mt-6">
           點任一遊戲建立房間 → 分享房號給朋友 → 開始連線對戰
