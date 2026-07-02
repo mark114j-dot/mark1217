@@ -89,6 +89,7 @@ function StudioWorkspace() {
   const [readyBuild, setReadyBuild] = useState(false);
   const [readyPublish, setReadyPublish] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [mobileTab, setMobileTab] = useState<"list" | "chat" | "info">("chat");
 
   async function refreshList() {
     try {
@@ -219,9 +220,18 @@ function StudioWorkspace() {
   }, [sessions, folderFilter, search]);
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-background text-foreground grid" style={{ gridTemplateColumns: "260px 1fr 320px" }}>
+    <main className="h-[100dvh] w-screen overflow-hidden bg-background text-foreground flex flex-col lg:grid" style={{ gridTemplateColumns: "260px 1fr 340px" }}>
+      {/* MOBILE TAB BAR */}
+      <div className="lg:hidden flex border-b border-foreground/20 bg-card">
+        {(["list", "chat", "info"] as const).map((t) => (
+          <button key={t} onClick={() => setMobileTab(t)}
+            className={`flex-1 py-2 text-sm font-bold ${mobileTab === t ? "bg-primary text-primary-foreground" : ""}`}>
+            {t === "list" ? "📋 專案" : t === "chat" ? "💬 聊天" : "⚙️ 資訊"}
+          </button>
+        ))}
+      </div>
       {/* LEFT */}
-      <aside className="border-r border-foreground/20 flex flex-col bg-card min-w-0">
+      <aside className={`${mobileTab === "list" ? "flex" : "hidden"} lg:flex border-r border-foreground/20 flex-col bg-card min-w-0 flex-1 lg:flex-none overflow-hidden`}>
         <div className="p-3 border-b border-foreground/20">
           <a href="/" className="text-xs text-muted-foreground hover:underline">← 回首頁</a>
           <div className="font-display font-bold text-lg mt-1">🛠️ AI 遊戲工作室</div>
@@ -265,7 +275,7 @@ function StudioWorkspace() {
       </aside>
 
       {/* CENTER — chat */}
-      <section className="flex flex-col min-w-0 bg-background">
+      <section className={`${mobileTab === "chat" ? "flex" : "hidden"} lg:flex flex-col min-w-0 bg-background flex-1 overflow-hidden`}>
         {activeId ? (
           <>
             <header className="border-b border-foreground/15 px-4 py-2 flex items-center gap-3">
@@ -387,7 +397,7 @@ function StudioWorkspace() {
       </section>
 
       {/* RIGHT — info panel */}
-      <aside className="border-l border-foreground/20 flex flex-col bg-card min-w-0 overflow-y-auto">
+      <aside className={`${mobileTab === "info" ? "flex" : "hidden"} lg:flex border-l border-foreground/20 flex-col bg-card min-w-0 overflow-y-auto flex-1 lg:flex-none`}>
         {activeId ? (
           <div className="p-4 space-y-4 text-sm">
             <div>
