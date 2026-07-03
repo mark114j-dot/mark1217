@@ -13,6 +13,7 @@ import {
   duplicateSession,
   publishSession,
   studioChat,
+  generatePlayableGame,
   type StudioDraftSpec,
   type StudioMessage,
 } from "@/lib/studio.functions";
@@ -72,6 +73,7 @@ function StudioWorkspace() {
   const duplicateFn = useServerFn(duplicateSession);
   const publishFn = useServerFn(publishSession);
   const chatFn = useServerFn(studioChat);
+  const generateFn = useServerFn(generatePlayableGame);
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -83,6 +85,7 @@ function StudioWorkspace() {
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [building, setBuilding] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [lastSuggestions, setLastSuggestions] = useState<string[]>([]);
   const [lastQuestions, setLastQuestions] = useState<string[]>([]);
