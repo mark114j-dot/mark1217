@@ -361,6 +361,16 @@ function StudioWorkspace() {
               </div>
             )}
 
+            <div className="px-4 pb-2">
+              <button
+                onClick={handleGeneratePlayable}
+                disabled={building || sending}
+                className="w-full border-brutal shadow-brutal-sm rounded-xl bg-accent text-accent-foreground font-display font-bold py-2 hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
+              >
+                {building ? "AI 正在寫真正可玩的遊戲程式…" : "⚡ AI 產生可玩的遊戲程式"}
+              </button>
+            </div>
+
             {pendingImages.length > 0 && (
               <div className="px-4 pb-2 flex gap-1">
                 {pendingImages.map((src, i) => (
@@ -392,11 +402,11 @@ function StudioWorkspace() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
-                placeholder="用自然語言描述你的遊戲…（Enter 送出，Shift+Enter 換行）"
+                placeholder="用自然語言描述玩法；也可先寫額外要求再按「AI 產生可玩的遊戲程式」"
                 rows={2}
                 className="flex-1 border-brutal rounded-lg px-3 py-2 bg-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <button onClick={handleSend} disabled={sending}
+              <button onClick={handleSend} disabled={sending || building}
                 className="border-brutal shadow-brutal-sm rounded-lg bg-primary text-primary-foreground font-bold px-4 py-2 hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50">
                 送出
               </button>
