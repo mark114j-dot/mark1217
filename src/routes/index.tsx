@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "畫聊 Doodle — 即時繪圖猜謂多人遊戲" },
+      { title: "畫聊 Doodle — 即時繪圖猜題多人遊戲" },
       { name: "description", content: "和朋友一起畫畫猜題！建立房間、分享代碼、即時繪圖對戰。" },
     ],
   }),
@@ -96,7 +96,7 @@ function Index() {
           className="text-center mb-8"
         >
           <div className="inline-block border-brutal shadow-brutal bg-secondary rounded-2xl px-5 py-2 -rotate-2 mb-4">
-            <span className="font-hand text-2xl">multiplayer • 即時對戰</span>
+            <span className="font-hand text-2xl">多人遊戲 • 即時對戰</span>
           </div>
           <h1 className="text-6xl font-display font-bold tracking-tight">
             畫<span className="text-primary">聊</span>

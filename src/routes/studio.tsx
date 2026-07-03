@@ -13,6 +13,7 @@ import {
   duplicateSession,
   publishSession,
   studioChat,
+  generatePlayableGame,
   type StudioDraftSpec,
   type StudioMessage,
 } from "@/lib/studio.functions";
@@ -72,6 +73,7 @@ function StudioWorkspace() {
   const duplicateFn = useServerFn(duplicateSession);
   const publishFn = useServerFn(publishSession);
   const chatFn = useServerFn(studioChat);
+  const generateFn = useServerFn(generatePlayableGame);
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -83,6 +85,7 @@ function StudioWorkspace() {
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [building, setBuilding] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [lastSuggestions, setLastSuggestions] = useState<string[]>([]);
   const [lastQuestions, setLastQuestions] = useState<string[]>([]);
@@ -193,6 +196,23 @@ function StudioWorkspace() {
       refreshList();
     } catch (e: any) { toast.error(e.message); }
     finally { setPublishing(false); }
+  }
+
+  async function handleGeneratePlayable() {
+    if (!activeId) { toast.error("先建立或選擇一個專案"); return; }
+    setBuilding(true);
+    try {
+      const res: any = await generateFn({ data: { id: activeId, extraPrompt: input.trim() || undefined } });
+      setMessages((res.messages as StudioMessage[]) ?? messages);
+      setSpec((res.draft_spec as StudioDraftSpec) ?? spec);
+      setProgress(res.progress ?? 100);
+      setReadyPublish(true);
+      setMobileTab("info");
+      if (input.trim()) setInput("");
+      toast.success("已產生真正可玩的遊戲程式，可以預覽與發布");
+      refreshList();
+    } catch (e: any) { toast.error(e.message ?? "產生遊戲失敗"); }
+    finally { setBuilding(false); }
   }
 
   async function handleArchive(id: string) {
@@ -341,6 +361,16 @@ function StudioWorkspace() {
               </div>
             )}
 
+            <div className="px-4 pb-2">
+              <button
+                onClick={handleGeneratePlayable}
+                disabled={building || sending}
+                className="w-full border-brutal shadow-brutal-sm rounded-xl bg-accent text-accent-foreground font-display font-bold py-2 hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
+              >
+                {building ? "AI 正在寫真正可玩的遊戲程式…" : "⚡ AI 產生可玩的遊戲程式"}
+              </button>
+            </div>
+
             {pendingImages.length > 0 && (
               <div className="px-4 pb-2 flex gap-1">
                 {pendingImages.map((src, i) => (
@@ -372,11 +402,11 @@ function StudioWorkspace() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
-                placeholder="用自然語言描述你的遊戲…（Enter 送出，Shift+Enter 換行）"
+                placeholder="用自然語言描述玩法；也可先寫額外要求再按「AI 產生可玩的遊戲程式」"
                 rows={2}
                 className="flex-1 border-brutal rounded-lg px-3 py-2 bg-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <button onClick={handleSend} disabled={sending}
+              <button onClick={handleSend} disabled={sending || building}
                 className="border-brutal shadow-brutal-sm rounded-lg bg-primary text-primary-foreground font-bold px-4 py-2 hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50">
                 送出
               </button>
@@ -436,8 +466,18 @@ function StudioWorkspace() {
             )}
 
             <div className="pt-2 border-t border-foreground/15">
-              <div className="text-xs text-muted-foreground mb-1 font-bold">🎮 遊戲內容（發布必填）</div>
+              <div className="text-xs text-muted-foreground mb-1 font-bold">🎮 可玩遊戲程式（發布必填）</div>
               <div className="space-y-2 text-xs">
+                <button
+                  onClick={handleGeneratePlayable}
+                  disabled={building}
+                  className="w-full border-brutal shadow-brutal-sm rounded-lg bg-accent text-accent-foreground py-2 font-display font-bold hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
+                >
+                  {building ? "生成中…" : spec.html_content ? "🔁 重新生成可玩遊戲" : "⚡ AI 生成真正可玩的遊戲"}
+                </button>
+                <div className="rounded-lg border border-foreground/15 bg-muted/40 p-2 text-[11px] leading-relaxed text-muted-foreground">
+                  AI 會產生完整 HTML/CSS/JS 遊戲程式，含遊戲邏輯、分數、勝負、重新開始與手機/鍵盤操作；如果規格有多人，會加入同機多人或 AI 對手模式。
+                </div>
                 <div>
                   <label className="block text-muted-foreground mb-0.5">外部遊戲連結（optional）</label>
                   <input
@@ -492,10 +532,25 @@ function StudioWorkspace() {
                   />
                   {spec.html_content && (
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      已載入 {(spec.html_content.length / 1024).toFixed(1)} KB
+                      已載入 {(spec.html_content.length / 1024).toFixed(1)} KB，可直接預覽與發布
                     </div>
                   )}
                 </div>
+                {spec.html_content && (
+                  <div>
+                    <div className="text-muted-foreground mb-0.5">內嵌預覽</div>
+                    <div className="aspect-[4/3] overflow-hidden rounded-lg border-2 border-foreground/30 bg-black">
+                      <iframe
+                        key={spec.generated_at ?? spec.html_content.length}
+                        srcDoc={spec.html_content}
+                        title="AI 生成遊戲預覽"
+                        className="h-full w-full bg-white"
+                        sandbox="allow-scripts allow-forms allow-pointer-lock"
+                        allow="autoplay; fullscreen; gamepad"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-muted-foreground mb-0.5">封面圖片 URL</label>
                   <input
@@ -505,7 +560,7 @@ function StudioWorkspace() {
                       const v = e.target.value;
                       setSpec((s) => ({ ...s, cover_image_url: v }));
                     }}
-                    onBlur={() => persistSession({ draft_spec: spec })}
+                    onBlur={(e) => persistSession({ draft_spec: { ...spec, cover_image_url: e.currentTarget.value } })}
                     placeholder="https://…/cover.png"
                     className="w-full border-brutal rounded px-2 py-1 bg-input"
                   />
@@ -515,7 +570,7 @@ function StudioWorkspace() {
                   <textarea
                     value={spec.instructions ?? ""}
                     onChange={(e) => setSpec((s) => ({ ...s, instructions: e.target.value }))}
-                    onBlur={() => persistSession({ draft_spec: spec })}
+                    onBlur={(e) => persistSession({ draft_spec: { ...spec, instructions: e.currentTarget.value } })}
                     placeholder="按空白鍵跳躍…"
                     rows={2}
                     className="w-full border-brutal rounded px-2 py-1 bg-input"
