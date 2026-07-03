@@ -31,6 +31,7 @@ export type StudioDraftSpec = {
   play_url?: string;
   cover_image_url?: string;
   instructions?: string;
+  generated_at?: string;
 };
 
 async function ensureAdmin(ctx: { supabase: any; userId: string }) {
@@ -145,6 +146,33 @@ function slugify(s: string) {
     .slice(0, 40) || `game-${Date.now()}`;
 }
 
+function extractJson(raw: string) {
+  const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+  try { return JSON.parse(cleaned); }
+  catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+    throw new Error("AI 回傳格式無法解析");
+  }
+}
+
+function normalizeHtml(input: string) {
+  let html = String(input || "").trim()
+    .replace(/^```html\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  if (!html) throw new Error("AI 沒有產生遊戲程式");
+  if (!/<html[\s>]/i.test(html)) {
+    html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Game</title></head><body>${html}</body></html>`;
+  }
+  const guard = `<script>(()=>{const show=(m)=>{let el=document.getElementById('__ai_game_error__');if(!el){el=document.createElement('pre');el.id='__ai_game_error__';el.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:999999;background:#fff3f3;color:#8b0000;border:2px solid #8b0000;border-radius:10px;padding:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:35vh;overflow:auto';document.body.appendChild(el)}el.textContent='遊戲程式錯誤：\\n'+m};window.addEventListener('error',e=>show(e.message||String(e.error||e)));window.addEventListener('unhandledrejection',e=>show(String(e.reason&&e.reason.message||e.reason||e)));})();<\/script>`;
+  html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${guard}</body>`) : `${html}${guard}`;
+  if (html.length > 500_000) throw new Error("產生的遊戲程式太大，請要求 AI 簡化後再產生");
+  return html;
+}
+
 export const publishSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
@@ -225,7 +253,8 @@ const SYSTEM_PROMPT = [
   "輸出必須是合法 JSON，除此之外不要有任何文字：",
   '{"reply":"...","spec_updates":{},"questions":[],"suggestions":[],"progress":0,"ready_to_build":false,"ready_to_publish":false}',
   "",
-  "draft_spec 可用欄位：name, emoji, category, primitive, description, min_players, max_players, needs_ai, needs_matchmaking, needs_leaderboard, needs_timer, timer_seconds, win_condition, lose_condition, rules[], ui[], levels, extras{}。",
+  "draft_spec 可用欄位：name, emoji, category, primitive, description, min_players, max_players, needs_ai, needs_matchmaking, needs_leaderboard, needs_timer, timer_seconds, win_condition, lose_condition, rules[], ui[], levels, extras{}, play_url, cover_image_url, instructions。",
+  "如果管理員要求『生成可玩的遊戲』，先整理規格並提醒可按右側『AI 產生可玩程式』。不要只產生版面，也不要假裝已發布。",
 ].join("\n");
 
 export const studioChat = createServerFn({ method: "POST" })
@@ -259,7 +288,7 @@ export const studioChat = createServerFn({ method: "POST" })
 
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages,
@@ -272,7 +301,7 @@ export const studioChat = createServerFn({ method: "POST" })
     const j = await r.json();
     const raw = j.choices?.[0]?.message?.content ?? "{}";
     let parsed: any;
-    try { parsed = JSON.parse(raw); }
+    try { parsed = extractJson(raw); }
     catch { parsed = { reply: raw, spec_updates: {}, questions: [], suggestions: [], progress: 0 }; }
     return {
       reply: String(parsed.reply ?? ""),
@@ -283,6 +312,80 @@ export const studioChat = createServerFn({ method: "POST" })
       ready_to_build: !!parsed.ready_to_build,
       ready_to_publish: !!parsed.ready_to_publish,
     };
+  });
+
+export const generatePlayableGame = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; extraPrompt?: string }) => d)
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context);
+    const { data: session, error } = await context.supabase
+      .from("studio_sessions").select("*").eq("id", data.id).single();
+    if (error) throw new Error(error.message);
+
+    const spec = (session.draft_spec ?? {}) as StudioDraftSpec;
+    if (!spec.name && !spec.description) throw new Error("請先用聊天描述遊戲名稱或玩法，再產生可玩程式");
+
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY 未設定");
+    const history = ((session.messages ?? []) as StudioMessage[]).slice(-12)
+      .map((m) => `${m.role === "user" ? "管理員" : "AI"}：${m.content}`).join("\n");
+
+    const prompt = [
+      "你是資深 2D Web 遊戲工程師。請根據規格產出一個真正可玩的單檔 HTML 遊戲，不是示意版面。",
+      "必須符合：",
+      "1. 回傳合法 JSON：{\"html_content\":\"完整HTML\",\"instructions\":\"玩法\",\"summary\":\"完成內容\",\"spec_updates\":{}}。不要輸出 JSON 以外文字。",
+      "2. html_content 必須包含完整 <!doctype html><html><head><style>...</style></head><body>...<script>...</script></body></html>。",
+      "3. 不可載入外部套件、外部圖片、外部字型、CDN、module import；所有 CSS/JS/素材都要內嵌。",
+      "4. 必須有真實遊戲迴圈或互動邏輯、分數/勝負/重新開始、鍵盤與手機觸控支援。",
+      "5. 若規格有 AI 對手或 max_players > 1，遊戲首頁要提供模式選擇：單人、同機雙人、AI 對手；每個模式都要可實際玩。",
+      "6. 若規格要求排行榜/線上配對，只在遊戲內保留本局分數與清楚的本機多人模式；正式平台排行榜由發布後平台處理，HTML 不可修改玩家資料或商城。",
+      "7. 介面使用繁體中文，畫面需適合 iframe 內全螢幕遊玩。",
+      "8. 程式碼要保守可靠，不要使用尚未宣告的變數，不要只做按鈕或靜態畫面。",
+      "",
+      `目前規格：${JSON.stringify(spec, null, 2)}`,
+      history ? `最近對話：\n${history}` : "",
+      data.extraPrompt ? `額外要求：${data.extraPrompt}` : "",
+    ].filter(Boolean).join("\n");
+
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (r.status === 429) throw new Error("AI 呼叫太頻繁，請稍後再試");
+    if (r.status === 402) throw new Error("AI 額度已用完，請至帳單設定加值");
+    if (!r.ok) throw new Error(`AI 產生遊戲失敗 ${r.status}`);
+
+    const j = await r.json();
+    const parsed = extractJson(j.choices?.[0]?.message?.content ?? "{}");
+    const html = normalizeHtml(parsed.html_content ?? parsed.html ?? "");
+    const nextSpec: StudioDraftSpec = {
+      ...spec,
+      ...(parsed.spec_updates ?? {}),
+      html_content: html,
+      instructions: String(parsed.instructions ?? spec.instructions ?? "依遊戲內提示操作。"),
+      generated_at: new Date().toISOString(),
+    };
+    const assistantMsg: StudioMessage = {
+      role: "assistant",
+      content: String(parsed.summary ?? "已產生可玩的 HTML 遊戲程式，可以在右側預覽並發布。"),
+      ts: Date.now(),
+    };
+    const nextMessages = [...(((session.messages ?? []) as StudioMessage[]) || []), assistantMsg];
+
+    const { data: updated, error: updateError } = await context.supabase
+      .from("studio_sessions")
+      .update({ draft_spec: nextSpec as any, messages: nextMessages as any, progress: 100 })
+      .eq("id", data.id)
+      .select("messages,draft_spec,progress")
+      .single();
+    if (updateError) throw new Error(updateError.message);
+    return updated;
   });
 
 export const checkAdmin = createServerFn({ method: "POST" })
