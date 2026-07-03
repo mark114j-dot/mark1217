@@ -198,6 +198,23 @@ function StudioWorkspace() {
     finally { setPublishing(false); }
   }
 
+  async function handleGeneratePlayable() {
+    if (!activeId) { toast.error("先建立或選擇一個專案"); return; }
+    setBuilding(true);
+    try {
+      const res: any = await generateFn({ data: { id: activeId, extraPrompt: input.trim() || undefined } });
+      setMessages((res.messages as StudioMessage[]) ?? messages);
+      setSpec((res.draft_spec as StudioDraftSpec) ?? spec);
+      setProgress(res.progress ?? 100);
+      setReadyPublish(true);
+      setMobileTab("info");
+      if (input.trim()) setInput("");
+      toast.success("已產生真正可玩的遊戲程式，可以預覽與發布");
+      refreshList();
+    } catch (e: any) { toast.error(e.message ?? "產生遊戲失敗"); }
+    finally { setBuilding(false); }
+  }
+
   async function handleArchive(id: string) {
     await updateFn({ data: { id, folder: "archived" } });
     refreshList();
