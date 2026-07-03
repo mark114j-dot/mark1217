@@ -466,8 +466,18 @@ function StudioWorkspace() {
             )}
 
             <div className="pt-2 border-t border-foreground/15">
-              <div className="text-xs text-muted-foreground mb-1 font-bold">🎮 遊戲內容（發布必填）</div>
+              <div className="text-xs text-muted-foreground mb-1 font-bold">🎮 可玩遊戲程式（發布必填）</div>
               <div className="space-y-2 text-xs">
+                <button
+                  onClick={handleGeneratePlayable}
+                  disabled={building}
+                  className="w-full border-brutal shadow-brutal-sm rounded-lg bg-accent text-accent-foreground py-2 font-display font-bold hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
+                >
+                  {building ? "生成中…" : spec.html_content ? "🔁 重新生成可玩遊戲" : "⚡ AI 生成真正可玩的遊戲"}
+                </button>
+                <div className="rounded-lg border border-foreground/15 bg-muted/40 p-2 text-[11px] leading-relaxed text-muted-foreground">
+                  AI 會產生完整 HTML/CSS/JS 遊戲程式，含遊戲邏輯、分數、勝負、重新開始與手機/鍵盤操作；如果規格有多人，會加入同機多人或 AI 對手模式。
+                </div>
                 <div>
                   <label className="block text-muted-foreground mb-0.5">外部遊戲連結（optional）</label>
                   <input
@@ -522,10 +532,25 @@ function StudioWorkspace() {
                   />
                   {spec.html_content && (
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      已載入 {(spec.html_content.length / 1024).toFixed(1)} KB
+                      已載入 {(spec.html_content.length / 1024).toFixed(1)} KB，可直接預覽與發布
                     </div>
                   )}
                 </div>
+                {spec.html_content && (
+                  <div>
+                    <div className="text-muted-foreground mb-0.5">內嵌預覽</div>
+                    <div className="aspect-[4/3] overflow-hidden rounded-lg border-2 border-foreground/30 bg-black">
+                      <iframe
+                        key={spec.generated_at ?? spec.html_content.length}
+                        srcDoc={spec.html_content}
+                        title="AI 生成遊戲預覽"
+                        className="h-full w-full bg-white"
+                        sandbox="allow-scripts allow-forms allow-pointer-lock"
+                        allow="autoplay; fullscreen; gamepad"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-muted-foreground mb-0.5">封面圖片 URL</label>
                   <input
@@ -535,7 +560,7 @@ function StudioWorkspace() {
                       const v = e.target.value;
                       setSpec((s) => ({ ...s, cover_image_url: v }));
                     }}
-                    onBlur={() => persistSession({ draft_spec: spec })}
+                    onBlur={(e) => persistSession({ draft_spec: { ...spec, cover_image_url: e.currentTarget.value } })}
                     placeholder="https://…/cover.png"
                     className="w-full border-brutal rounded px-2 py-1 bg-input"
                   />
@@ -545,7 +570,7 @@ function StudioWorkspace() {
                   <textarea
                     value={spec.instructions ?? ""}
                     onChange={(e) => setSpec((s) => ({ ...s, instructions: e.target.value }))}
-                    onBlur={() => persistSession({ draft_spec: spec })}
+                    onBlur={(e) => persistSession({ draft_spec: { ...spec, instructions: e.currentTarget.value } })}
                     placeholder="按空白鍵跳躍…"
                     rows={2}
                     className="w-full border-brutal rounded px-2 py-1 bg-input"
