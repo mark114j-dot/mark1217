@@ -167,6 +167,16 @@ function normalizeHtml(input: string) {
   if (!/<html[\s>]/i.test(html)) {
     html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Game</title></head><body>${html}</body></html>`;
   }
+  // Inject strict CSP so uploaded/AI HTML cannot phone home, load remote scripts, or frame anything.
+  // sandbox on the iframe (allow-scripts only, no allow-same-origin) already isolates it from the parent origin;
+  // CSP is defense-in-depth against data exfiltration via fetch/img/beacon.
+  const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors *;">`;
+  const referrer = `<meta name="referrer" content="no-referrer">`;
+  if (/<head[\s>]/i.test(html)) {
+    html = html.replace(/<head([^>]*)>/i, `<head$1>${csp}${referrer}`);
+  } else {
+    html = html.replace(/<html([^>]*)>/i, `<html$1><head>${csp}${referrer}</head>`);
+  }
   const guard = `<script>(()=>{const show=(m)=>{let el=document.getElementById('__ai_game_error__');if(!el){el=document.createElement('pre');el.id='__ai_game_error__';el.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:999999;background:#fff3f3;color:#8b0000;border:2px solid #8b0000;border-radius:10px;padding:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:35vh;overflow:auto';document.body.appendChild(el)}el.textContent='遊戲程式錯誤：\\n'+m};window.addEventListener('error',e=>show(e.message||String(e.error||e)));window.addEventListener('unhandledrejection',e=>show(String(e.reason&&e.reason.message||e.reason||e)));})();<\/script>`;
   html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${guard}</body>`) : `${html}${guard}`;
   if (html.length > 500_000) throw new Error("產生的遊戲程式太大，請要求 AI 簡化後再產生");
