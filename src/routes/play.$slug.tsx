@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Smile } from "lucide-react";
+import { getClientId } from "@/lib/game";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/play/$slug")({
   component: PlayGame,
@@ -16,11 +18,33 @@ type Game = {
   cover_image_url: string | null; instructions: string | null;
 };
 
+type Announcement = {
+  id: string; kind: string; title: string; body: string;
+  block_play: boolean; require_typing: boolean;
+};
+
+type OwnedEmote = {
+  emote_id: string;
+  shop_emotes: { id: string; name: string; gif_url: string; display_mode: "fullscreen" | "bar" } | null;
+};
+
+type BroadcastEvent = {
+  id: string; room_code: string; gif_url: string;
+  display_mode: "fullscreen" | "bar"; sender_name: string | null;
+};
+
 function PlayGame() {
   const { slug } = Route.useParams();
+  const { user } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [blockAnnouncement, setBlockAnnouncement] = useState<Announcement | null>(null);
+  const [typedText, setTypedText] = useState("");
+  const [owned, setOwned] = useState<OwnedEmote[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [effects, setEffects] = useState<BroadcastEvent[]>([]);
+  const seenRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -35,6 +59,62 @@ function PlayGame() {
     })();
   }, [slug]);
 
+  // Check for blocking announcements
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("announcements")
+        .select("id,kind,title,body,block_play,require_typing")
+        .eq("active", true).eq("block_play", true)
+        .order("created_at", { ascending: false }).limit(1);
+      if (data && data[0]) setBlockAnnouncement(data[0] as Announcement);
+    })();
+  }, []);
+
+  // Load owned emotes for signed-in user
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("owned_emotes")
+        .select("emote_id, shop_emotes(id,name,gif_url,display_mode)")
+        .eq("user_id", user.id);
+      setOwned((data ?? []) as any);
+    })();
+  }, [user]);
+
+  // Realtime broadcast subscription per slug
+  useEffect(() => {
+    if (!slug) return;
+    const channel = supabase
+      .channel(`emotes:${slug}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "emote_broadcasts",
+        filter: `room_code=eq.${slug}`,
+      }, (payload) => {
+        const ev = payload.new as BroadcastEvent;
+        if (seenRef.current.has(ev.id)) return;
+        seenRef.current.add(ev.id);
+        setEffects((prev) => [...prev, ev]);
+        setTimeout(() => setEffects((p) => p.filter((e) => e.id !== ev.id)), 3200);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [slug]);
+
+  async function sendEmote(e: OwnedEmote) {
+    if (!user || !e.shop_emotes) return;
+    setPickerOpen(false);
+    await supabase.from("emote_broadcasts").insert({
+      room_code: slug,
+      emote_id: e.shop_emotes.id,
+      gif_url: e.shop_emotes.gif_url,
+      display_mode: e.shop_emotes.display_mode,
+      sender_id: user.id,
+      sender_name: user.user_metadata?.username ?? user.email ?? null,
+    });
+  }
+
   if (loading) return <main className="min-h-screen grid place-items-center bg-background"><div>讀取中…</div></main>;
   if (err || !game) return (
     <main className="min-h-screen grid place-items-center bg-background p-6">
@@ -45,6 +125,51 @@ function PlayGame() {
       </div>
     </main>
   );
+
+  // Announcement gate
+  if (blockAnnouncement) {
+    const required = blockAnnouncement.body.trim();
+    const match = typedText.trim() === required;
+    const canProceed = blockAnnouncement.require_typing ? match : false;
+    const kindStyle: Record<string, string> = {
+      update: "bg-sky-100 border-sky-500",
+      event: "bg-amber-100 border-amber-500",
+      maintenance: "bg-slate-100 border-slate-500",
+      urgent: "bg-red-100 border-red-600",
+    };
+    const kindLabel: Record<string, string> = {
+      update: "🔔 更新公告", event: "🎉 活動公告", maintenance: "🛠 維護公告", urgent: "🚨 緊急通知",
+    };
+    return (
+      <main className="min-h-screen grid place-items-center bg-background p-4">
+        <div className={`w-full max-w-lg border-brutal shadow-brutal rounded-2xl p-5 ${kindStyle[blockAnnouncement.kind] ?? "bg-card"}`}>
+          <div className="text-sm font-bold mb-1">{kindLabel[blockAnnouncement.kind] ?? "公告"}</div>
+          <h1 className="font-display text-2xl font-bold mb-2">{blockAnnouncement.title}</h1>
+          <pre className="whitespace-pre-wrap text-sm mb-3 leading-relaxed">{blockAnnouncement.body}</pre>
+          {blockAnnouncement.require_typing ? (
+            <>
+              <div className="text-xs text-muted-foreground mb-1">請一字不差輸入上方內容才能繼續：</div>
+              <textarea
+                value={typedText}
+                onChange={(e) => setTypedText(e.target.value)}
+                rows={4}
+                className="w-full border-brutal rounded-lg p-2 text-sm font-mono bg-white"
+                placeholder="在此輸入公告內容…"
+              />
+              <div className="text-xs mt-1">{match ? "✅ 完全一致" : `已輸入 ${typedText.length}/${required.length}`}</div>
+              <button
+                disabled={!canProceed}
+                onClick={() => setBlockAnnouncement(null)}
+                className="mt-3 w-full border-brutal shadow-brutal-sm rounded-xl bg-primary text-primary-foreground font-display font-bold py-2 disabled:opacity-40"
+              >{canProceed ? "我已了解，繼續遊玩" : "請完整輸入"}</button>
+            </>
+          ) : (
+            <Link to="/games" className="block text-center underline mt-2">回大廳</Link>
+          )}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
@@ -57,6 +182,15 @@ function PlayGame() {
           <div className="font-display font-bold truncate">{game.name}</div>
           <div className="text-xs text-muted-foreground truncate">{game.description}</div>
         </div>
+        {user && owned.length > 0 && (
+          <button
+            onClick={() => setPickerOpen((v) => !v)}
+            className="border-brutal shadow-brutal-sm rounded-lg p-1.5 bg-primary/10 hover:translate-y-0.5 hover:shadow-none transition"
+            title="送出 GIF 表情"
+          >
+            <Smile className="w-4 h-4" />
+          </button>
+        )}
       </header>
       <div className="flex-1 relative bg-black">
         {game.play_url ? (
@@ -81,6 +215,41 @@ function PlayGame() {
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-white">此遊戲尚未上傳內容</div>
+        )}
+        {/* Emote overlays */}
+        {effects.map((ev) => (
+          <div
+            key={ev.id}
+            className={
+              ev.display_mode === "fullscreen"
+                ? "pointer-events-none absolute inset-0 grid place-items-center bg-black/40 animate-in fade-in"
+                : "pointer-events-none absolute bottom-4 left-0 right-0 flex justify-center"
+            }
+          >
+            <img
+              src={ev.gif_url}
+              alt=""
+              className={ev.display_mode === "fullscreen" ? "max-w-[90%] max-h-[90%] drop-shadow-2xl" : "h-24 drop-shadow-2xl"}
+              referrerPolicy="no-referrer"
+            />
+            {ev.sender_name && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white font-bold drop-shadow">{ev.sender_name}</div>
+            )}
+          </div>
+        ))}
+        {/* Emote picker */}
+        {pickerOpen && (
+          <div className="absolute right-2 top-2 z-20 bg-card border-brutal shadow-brutal rounded-xl p-2 max-w-[260px] max-h-[70vh] overflow-auto">
+            <div className="text-xs font-bold mb-1">選一個表情送出</div>
+            <div className="grid grid-cols-3 gap-1">
+              {owned.map((e) => e.shop_emotes && (
+                <button key={e.emote_id} onClick={() => sendEmote(e)}
+                  className="border border-foreground/20 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary">
+                  <img src={e.shop_emotes.gif_url} alt={e.shop_emotes.name} className="w-full aspect-square object-cover" referrerPolicy="no-referrer" />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
       {game.instructions && (

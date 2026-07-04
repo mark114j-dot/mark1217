@@ -1,25 +1,33 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { z } from "zod";
 import { motion } from "motion/react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth";
 import { AVATARS } from "@/lib/game";
+import { COUNTRIES } from "@/lib/i18n";
 import { toast } from "sonner";
+
+const loginSearchSchema = z.object({ ref: z.string().optional() });
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
+  validateSearch: loginSearchSchema,
   head: () => ({ meta: [{ title: "登入 · 畫聊" }] }),
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/login" });
   const { user } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [avatar, setAvatar] = useState(AVATARS[0]);
+  const [country, setCountry] = useState(COUNTRIES[0].code);
+  const [inviteCode, setInviteCode] = useState((search.ref ?? "").toUpperCase());
   const [loading, setLoading] = useState(false);
 
   if (user) {
@@ -35,15 +43,34 @@ function LoginPage() {
           toast.error("請輸入顯示名稱");
           return;
         }
+        const selected = COUNTRIES.find((c) => c.code === country) ?? COUNTRIES[0];
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { username: username.trim(), avatar },
+            data: {
+              username: username.trim(),
+              avatar,
+              country: selected.code,
+              country_flag: selected.flag,
+              language: selected.lang,
+              invite_ref: inviteCode.trim().toUpperCase() || null,
+            },
           },
         });
         if (error) throw error;
+        // Persist country/language onto profile (best-effort; may run before session established)
+        try {
+          const { data: sess } = await supabase.auth.getUser();
+          if (sess.user) {
+            await supabase.from("profiles").update({
+              country: selected.code, language: selected.lang,
+            }).eq("id", sess.user.id);
+          }
+          localStorage.setItem("lang", selected.lang);
+          if (inviteCode.trim()) localStorage.setItem("pending_invite", inviteCode.trim().toUpperCase());
+        } catch {}
         toast.success("註冊成功！");
         navigate({ to: "/" });
       } else {
@@ -105,6 +132,27 @@ function LoginPage() {
                 maxLength={16}
                 className="w-full border-brutal rounded-xl px-4 py-3 bg-input focus:outline-none focus:ring-2 focus:ring-primary"
               />
+              <div>
+                <div className="text-xs text-muted-foreground mb-1.5">選擇國家/地區（語言會自動套用）</div>
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-full border-brutal rounded-xl px-3 py-3 bg-input"
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.flag} {c.name} ({c.lang})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1.5">邀請碼（選填，雙方各得 10 💎）</div>
+                <input
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase().slice(0, 12))}
+                  placeholder="例如 A1B2C3D4"
+                  className="w-full border-brutal rounded-xl px-4 py-3 bg-input font-mono"
+                />
+              </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1.5">頭像</div>
                 <div className="grid grid-cols-8 gap-1.5">
