@@ -84,7 +84,7 @@ function AdminAnnouncements() {
         </div>
         <div className="flex gap-2">
           <button onClick={async () => {
-            try { await save(editing as any); toast.success("已儲存"); setEditing({ kind: "update", title: "", body: "", active: true, block_play: false, require_typing: false }); refresh(); }
+            try { await save({ data: editing as any }); toast.success("已儲存"); setEditing({ kind: "update", title: "", body: "", active: true, block_play: false, require_typing: false }); refresh(); }
             catch (e) { toast.error(String(e)); }
           }} className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-primary text-primary-foreground font-bold">
             {editing.id ? "更新" : "新增"}
@@ -105,7 +105,7 @@ function AdminAnnouncements() {
               </div>
               <div className="flex flex-col gap-1">
                 <button onClick={() => setEditing(r)} className="text-xs underline">編輯</button>
-                <button onClick={async () => { if (!confirm("刪除？")) return; await del({ id: r.id }); refresh(); }} className="text-xs text-destructive underline">刪除</button>
+                <button onClick={async () => { if (!confirm("刪除？")) return; await del({ data: { id: r.id } }); refresh(); }} className="text-xs text-destructive underline">刪除</button>
               </div>
             </div>
           </div>
