@@ -64,16 +64,20 @@ function PlayGame() {
             src={game.play_url}
             title={game.name}
             className="absolute inset-0 w-full h-full"
-            sandbox="allow-scripts allow-forms allow-pointer-lock allow-same-origin"
+            sandbox="allow-scripts allow-pointer-lock"
+            referrerPolicy="no-referrer"
             allow="autoplay; fullscreen; gamepad"
+            loading="lazy"
           />
         ) : game.html_content ? (
           <iframe
             srcDoc={game.html_content}
             title={game.name}
             className="absolute inset-0 w-full h-full bg-white"
-            sandbox="allow-scripts allow-forms allow-pointer-lock"
+            sandbox="allow-scripts allow-pointer-lock"
+            referrerPolicy="no-referrer"
             allow="autoplay; fullscreen; gamepad"
+            loading="lazy"
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-white">此遊戲尚未上傳內容</div>
