@@ -545,7 +545,8 @@ function StudioWorkspace() {
                         srcDoc={spec.html_content}
                         title="AI 生成遊戲預覽"
                         className="h-full w-full bg-white"
-                        sandbox="allow-scripts allow-forms allow-pointer-lock"
+                        sandbox="allow-scripts allow-pointer-lock"
+                        referrerPolicy="no-referrer"
                         allow="autoplay; fullscreen; gamepad"
                       />
                     </div>
