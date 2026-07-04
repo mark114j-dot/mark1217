@@ -41,6 +41,51 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          active: boolean
+          block_play: boolean
+          body: string
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          kind: string
+          require_typing: boolean
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          block_play?: boolean
+          body: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          kind: string
+          require_typing?: boolean
+          starts_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          block_play?: boolean
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          require_typing?: boolean
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           content: string
@@ -67,6 +112,47 @@ export type Database = {
           sender_id?: string
         }
         Relationships: []
+      }
+      emote_broadcasts: {
+        Row: {
+          created_at: string
+          display_mode: string
+          emote_id: string
+          gif_url: string
+          id: string
+          room_code: string
+          sender_id: string | null
+          sender_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_mode: string
+          emote_id: string
+          gif_url: string
+          id?: string
+          room_code: string
+          sender_id?: string | null
+          sender_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_mode?: string
+          emote_id?: string
+          gif_url?: string
+          id?: string
+          room_code?: string
+          sender_id?: string | null
+          sender_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emote_broadcasts_emote_id_fkey"
+            columns: ["emote_id"]
+            isOneToOne: false
+            referencedRelation: "shop_emotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       friendships: {
         Row: {
@@ -208,6 +294,30 @@ export type Database = {
         }
         Relationships: []
       }
+      invite_claims: {
+        Row: {
+          created_at: string
+          id: string
+          invited_id: string
+          referrer_id: string
+          reward_gems: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_id: string
+          referrer_id: string
+          reward_gems?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_id?: string
+          referrer_id?: string
+          reward_gems?: number
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -300,6 +410,38 @@ export type Database = {
         }
         Relationships: []
       }
+      owned_emotes: {
+        Row: {
+          created_at: string
+          emote_id: string
+          id: string
+          price_paid: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emote_id: string
+          id?: string
+          price_paid?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emote_id?: string
+          id?: string
+          price_paid?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owned_emotes_emote_id_fkey"
+            columns: ["emote_id"]
+            isOneToOne: false
+            referencedRelation: "shop_emotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           avatar: string
@@ -350,30 +492,39 @@ export type Database = {
       profiles: {
         Row: {
           avatar: string
+          country: string | null
           created_at: string
           current_room_code: string | null
           id: string
+          invite_code: string | null
           is_online: boolean
+          language: string
           last_seen: string
           updated_at: string
           username: string
         }
         Insert: {
           avatar?: string
+          country?: string | null
           created_at?: string
           current_room_code?: string | null
           id: string
+          invite_code?: string | null
           is_online?: boolean
+          language?: string
           last_seen?: string
           updated_at?: string
           username: string
         }
         Update: {
           avatar?: string
+          country?: string | null
           created_at?: string
           current_room_code?: string | null
           id?: string
+          invite_code?: string | null
           is_online?: boolean
+          language?: string
           last_seen?: string
           updated_at?: string
           username?: string
@@ -466,6 +617,42 @@ export type Database = {
           round_ends_at?: string | null
           status?: string
           word_hint?: string | null
+        }
+        Relationships: []
+      }
+      shop_emotes: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          display_mode: string
+          gem_price: number
+          gif_url: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          display_mode?: string
+          gem_price: number
+          gif_url: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          display_mode?: string
+          gem_price?: number
+          gif_url?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -574,18 +761,21 @@ export type Database = {
           client_id: string
           coins: number
           created_at: string
+          gems: number
           updated_at: string
         }
         Insert: {
           client_id: string
           coins?: number
           created_at?: string
+          gems?: number
           updated_at?: string
         }
         Update: {
           client_id?: string
           coins?: number
           created_at?: string
+          gems?: number
           updated_at?: string
         }
         Relationships: []
@@ -595,12 +785,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_gems: {
+        Args: { _amount: number; _client_id: string }
+        Returns: number
+      }
+      gen_invite_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      spend_gems: {
+        Args: { _amount: number; _client_id: string }
+        Returns: number
       }
     }
     Enums: {
