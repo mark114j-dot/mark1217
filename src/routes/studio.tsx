@@ -93,6 +93,8 @@ function StudioWorkspace() {
   const [readyPublish, setReadyPublish] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "chat" | "info">("chat");
+  const [codeTab, setCodeTab] = useState<"html" | "css" | "js">("html");
+  const [parts, setParts] = useState<{ html: string; css: string; js: string }>({ html: "", css: "", js: "" });
 
   async function refreshList() {
     try {
@@ -111,6 +113,8 @@ function StudioWorkspace() {
       setProgress(s.progress ?? 0);
       setLastQuestions([]); setLastSuggestions([]);
       setReadyBuild(false); setReadyPublish(false);
+      const p = ((s.draft_spec?.extras as any)?.parts) ?? { html: "", css: "", js: "" };
+      setParts({ html: p.html ?? "", css: p.css ?? "", js: p.js ?? "" });
     } catch (e: any) { toast.error(e.message); }
   }
 
@@ -536,6 +540,66 @@ function StudioWorkspace() {
                     </div>
                   )}
                 </div>
+
+                {/* 3-column HTML/CSS/JS editor */}
+                <div className="border border-foreground/15 rounded-lg p-2 bg-muted/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[11px] font-bold">🎛️ 手動程式碼（HTML / CSS / JS）</div>
+                    <div className="text-[10px] text-muted-foreground">三格可只填一個</div>
+                  </div>
+                  <div className="flex gap-1 mb-1">
+                    {(["html", "css", "js"] as const).map((k) => (
+                      <button key={k} onClick={() => setCodeTab(k)}
+                        className={`text-[11px] border rounded px-2 py-0.5 ${codeTab === k ? "bg-primary text-primary-foreground border-primary" : "border-foreground/30 bg-card"}`}>
+                        {k === "html" ? "HTML" : k === "css" ? "CSS" : "JS"}
+                        {parts[k].trim() && <span className="ml-1">●</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={parts[codeTab]}
+                    onChange={(e) => setParts((p) => ({ ...p, [codeTab]: e.target.value }))}
+                    placeholder={
+                      codeTab === "html" ? "<div id='app'>Hello</div>" :
+                      codeTab === "css" ? "body { background: #111; color: #fff; }" :
+                      "console.log('hi'); // 前端 JS"
+                    }
+                    rows={6}
+                    className="w-full border-brutal rounded px-2 py-1 bg-input font-mono text-[11px]"
+                  />
+                  <div className="flex gap-1 mt-1">
+                    <button
+                      onClick={() => {
+                        const { html, css, js } = parts;
+                        if (!html.trim() && !css.trim() && !js.trim()) {
+                          toast.error("至少填入一個框");
+                          return;
+                        }
+                        const composed = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${spec.name ?? "AI Game"}</title><style>html,body{margin:0;padding:0;height:100%;font-family:system-ui,sans-serif;}${css}</style></head><body>${html}<script>(function(){try{${js}}catch(e){console.error(e);}})();<\/script></body></html>`;
+                        const nextExtras = { ...(spec.extras ?? {}), parts: { html, css, js } };
+                        const nextSpec = { ...spec, html_content: composed, extras: nextExtras, generated_at: new Date().toISOString() };
+                        setSpec(nextSpec);
+                        persistSession({ draft_spec: nextSpec });
+                        toast.success("已組合並套用到遊戲");
+                      }}
+                      className="flex-1 border-brutal shadow-brutal-sm rounded bg-primary text-primary-foreground text-[11px] font-bold py-1"
+                    >⚙️ 組合並套用</button>
+                    <button
+                      onClick={() => {
+                        setParts({ html: "", css: "", js: "" });
+                        const nextExtras = { ...(spec.extras ?? {}), parts: undefined };
+                        const nextSpec = { ...spec, extras: nextExtras };
+                        setSpec(nextSpec);
+                        persistSession({ draft_spec: nextSpec });
+                      }}
+                      className="border-brutal rounded bg-card text-[11px] px-2"
+                    >清空</button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                    點「組合並套用」後會覆寫上方 HTML；只填一格也可以，發布時仍以組合後的 HTML 為主。
+                  </div>
+                </div>
+
                 {spec.html_content && (
                   <div>
                     <div className="text-muted-foreground mb-0.5">內嵌預覽</div>

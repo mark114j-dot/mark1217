@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { AuthMenu } from "@/components/AuthMenu";
 import { MusicToggle } from "@/components/MusicToggle";
 import { useAuth } from "@/lib/auth";
+import { useServerFn } from "@tanstack/react-start";
+import { checkAdmin } from "@/lib/studio.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -26,6 +28,12 @@ function Index() {
   const [avatar, setAvatar] = useState(AVATARS[0]);
   const [loading, setLoading] = useState<"create" | "join" | null>(null);
   const { user, profile } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const checkFn = useServerFn(checkAdmin);
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    checkFn().then((r: any) => setIsAdmin(!!r.isAdmin)).catch(() => setIsAdmin(false));
+  }, [user]);
 
   useEffect(() => {
     getClientId();
@@ -200,7 +208,26 @@ function Index() {
           >
             🛍️ 頭像商店
           </a>
+          {user && (
+            <a
+              href="/invite"
+              className="border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-cyan-100 font-bold hover:translate-y-0.5 hover:shadow-none transition"
+            >
+              👥 邀請好友
+            </a>
+          )}
         </div>
+
+        {isAdmin && (
+          <div className="mt-3 flex gap-2 justify-center flex-wrap">
+            <a href="/admin/announcements" className="border-brutal shadow-brutal-sm rounded-xl px-3 py-1.5 bg-red-100 font-bold text-sm hover:translate-y-0.5 hover:shadow-none transition">
+              📣 公告管理
+            </a>
+            <a href="/admin/emotes" className="border-brutal shadow-brutal-sm rounded-xl px-3 py-1.5 bg-fuchsia-100 font-bold text-sm hover:translate-y-0.5 hover:shadow-none transition">
+              🖼️ GIF 表情管理
+            </a>
+          </div>
+        )}
 
         <div className="mt-3 text-center">
           <a

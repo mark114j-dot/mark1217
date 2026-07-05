@@ -12,12 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as ArcadeRouteImport } from './routes/arcade'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as PlaySlugRouteImport } from './routes/play.$slug'
+import { Route as AdminEmotesRouteImport } from './routes/admin.emotes'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
@@ -34,6 +36,11 @@ const ShopRoute = ShopRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesRoute = GamesRouteImport.update({
@@ -66,6 +73,11 @@ const PlaySlugRoute = PlaySlugRouteImport.update({
   path: '/play/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEmotesRoute = AdminEmotesRouteImport.update({
+  id: '/admin/emotes',
+  path: '/admin/emotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
   id: '/admin/announcements',
   path: '/admin/announcements',
@@ -82,10 +94,12 @@ export interface FileRoutesByFullPath {
   '/arcade': typeof ArcadeRoute
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
@@ -95,10 +109,12 @@ export interface FileRoutesByTo {
   '/arcade': typeof ArcadeRoute
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
@@ -109,10 +125,12 @@ export interface FileRoutesById {
   '/arcade': typeof ArcadeRoute
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
@@ -124,10 +142,12 @@ export interface FileRouteTypes {
     | '/arcade'
     | '/friends'
     | '/games'
+    | '/invite'
     | '/login'
     | '/shop'
     | '/studio'
     | '/admin/announcements'
+    | '/admin/emotes'
     | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
@@ -137,10 +157,12 @@ export interface FileRouteTypes {
     | '/arcade'
     | '/friends'
     | '/games'
+    | '/invite'
     | '/login'
     | '/shop'
     | '/studio'
     | '/admin/announcements'
+    | '/admin/emotes'
     | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
@@ -150,10 +172,12 @@ export interface FileRouteTypes {
     | '/arcade'
     | '/friends'
     | '/games'
+    | '/invite'
     | '/login'
     | '/shop'
     | '/studio'
     | '/admin/announcements'
+    | '/admin/emotes'
     | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
@@ -164,10 +188,12 @@ export interface RootRouteChildren {
   ArcadeRoute: typeof ArcadeRoute
   FriendsRoute: typeof FriendsRoute
   GamesRoute: typeof GamesRoute
+  InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   ShopRoute: typeof ShopRoute
   StudioRoute: typeof StudioRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
+  AdminEmotesRoute: typeof AdminEmotesRoute
   PlaySlugRoute: typeof PlaySlugRoute
   RoomCodeRoute: typeof RoomCodeRoute
   MiniTypeCodeRoute: typeof MiniTypeCodeRoute
@@ -194,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games': {
@@ -238,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/emotes': {
+      id: '/admin/emotes'
+      path: '/admin/emotes'
+      fullPath: '/admin/emotes'
+      preLoaderRoute: typeof AdminEmotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/announcements': {
       id: '/admin/announcements'
       path: '/admin/announcements'
@@ -260,10 +300,12 @@ const rootRouteChildren: RootRouteChildren = {
   ArcadeRoute: ArcadeRoute,
   FriendsRoute: FriendsRoute,
   GamesRoute: GamesRoute,
+  InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   ShopRoute: ShopRoute,
   StudioRoute: StudioRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
+  AdminEmotesRoute: AdminEmotesRoute,
   PlaySlugRoute: PlaySlugRoute,
   RoomCodeRoute: RoomCodeRoute,
   MiniTypeCodeRoute: MiniTypeCodeRoute,
