@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as ArcadeRouteImport } from './routes/arcade'
@@ -35,6 +36,11 @@ const ShopRoute = ShopRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesRoute = GamesRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/arcade': typeof ArcadeRoute
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/arcade': typeof ArcadeRoute
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/arcade': typeof ArcadeRoute
   '/friends': typeof FriendsRoute
   '/games': typeof GamesRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/arcade'
     | '/friends'
     | '/games'
+    | '/invite'
     | '/login'
     | '/shop'
     | '/studio'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/arcade'
     | '/friends'
     | '/games'
+    | '/invite'
     | '/login'
     | '/shop'
     | '/studio'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/arcade'
     | '/friends'
     | '/games'
+    | '/invite'
     | '/login'
     | '/shop'
     | '/studio'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   ArcadeRoute: typeof ArcadeRoute
   FriendsRoute: typeof FriendsRoute
   GamesRoute: typeof GamesRoute
+  InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   ShopRoute: typeof ShopRoute
   StudioRoute: typeof StudioRoute
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games': {
@@ -280,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArcadeRoute: ArcadeRoute,
   FriendsRoute: FriendsRoute,
   GamesRoute: GamesRoute,
+  InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   ShopRoute: ShopRoute,
   StudioRoute: StudioRoute,

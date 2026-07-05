@@ -4,8 +4,12 @@ import { motion } from "motion/react";
 import { ArrowLeft, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { SHOP_AVATARS, getWallet, getOwned, buyAvatar, FREE_AVATARS } from "@/lib/wallet";
-import { saveAvatar } from "@/lib/game";
+import { saveAvatar, getClientId } from "@/lib/game";
 import { sfx } from "@/lib/sfx";
+import { useServerFn } from "@tanstack/react-start";
+import { buyEmote as buyGifEmote } from "@/lib/emotes.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import {
   EMOTE_PACKS,
   BOOSTERS,
@@ -27,25 +31,62 @@ const RARITY_STYLE: Record<string, string> = {
   legendary: "from-amber-200 to-orange-100 border-amber-500",
 };
 
-type Tab = "avatars" | "emotes" | "boosters";
+type Tab = "avatars" | "emotes" | "boosters" | "gifs";
+
+type GifEmote = {
+  id: string; name: string; gif_url: string; gem_price: number;
+  display_mode: "fullscreen" | "bar"; active: boolean;
+};
 
 function Shop() {
+  const { user } = useAuth();
+  const buyGifFn = useServerFn(buyGifEmote);
   const [coins, setCoins] = useState(0);
+  const [gems, setGems] = useState(0);
   const [owned, setOwned] = useState<string[]>(FREE_AVATARS);
   const [busy, setBusy] = useState<string | null>(null);
   const [skus, setSkus] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Tab>("avatars");
+  const [gifs, setGifs] = useState<GifEmote[]>([]);
+  const [ownedGifIds, setOwnedGifIds] = useState<Set<string>>(new Set());
 
   async function refresh() {
     const w = await getWallet();
     setCoins(w.coins);
+    // fetch gems separately (getWallet only returns coins)
+    const { data: wRow } = await supabase.from("wallets").select("gems").eq("client_id", getClientId()).maybeSingle();
+    setGems(wRow?.gems ?? 0);
     setOwned(await getOwned());
     setSkus(await getOwnedSkus());
+    // shop gifs (public read)
+    const { data: gRows } = await supabase.from("shop_emotes")
+      .select("id,name,gif_url,gem_price,display_mode,active")
+      .eq("active", true).order("gem_price", { ascending: true });
+    setGifs((gRows ?? []) as GifEmote[]);
+    if (user) {
+      const { data: oRows } = await supabase.from("owned_emotes").select("emote_id").eq("user_id", user.id);
+      setOwnedGifIds(new Set((oRows ?? []).map((r: any) => r.emote_id)));
+    } else {
+      setOwnedGifIds(new Set());
+    }
   }
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [user]);
+
+  async function purchaseGif(g: GifEmote) {
+    if (!user) { toast.error("請先登入才能購買 GIF 表情"); return; }
+    if (gems < g.gem_price) { toast.error("寶石不足"); return; }
+    setBusy(`gif:${g.id}`);
+    try {
+      await buyGifFn({ data: { emoteId: g.id, clientId: getClientId() } });
+      sfx.coin();
+      toast.success(`已擁有「${g.name}」！遊戲中可從表情按鈕送出`);
+      await refresh();
+    } catch (e: any) { sfx.lose(); toast.error(e.message ?? "購買失敗"); }
+    finally { setBusy(null); }
+  }
 
   async function purchase(emoji: string) {
     setBusy(emoji);
@@ -98,9 +139,14 @@ function Shop() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h1 className="font-display text-3xl sm:text-4xl font-black">🛍️ 頭像商店</h1>
-          <div className="ml-auto flex items-center gap-2 border-brutal shadow-brutal-sm bg-yellow-100 px-3 py-1.5 rounded-xl font-mono font-bold">
-            <Coins className="w-4 h-4 text-yellow-600" />
-            {coins}
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-1 border-brutal shadow-brutal-sm bg-yellow-100 px-3 py-1.5 rounded-xl font-mono font-bold">
+              <Coins className="w-4 h-4 text-yellow-600" />
+              {coins}
+            </div>
+            <div className="flex items-center gap-1 border-brutal shadow-brutal-sm bg-cyan-100 px-3 py-1.5 rounded-xl font-mono font-bold">
+              💎 {gems}
+            </div>
           </div>
         </div>
 
@@ -110,6 +156,7 @@ function Shop() {
           {([
             ["avatars", "🐱 頭像"],
             ["emotes", "😀 表情"],
+            ["gifs", "🖼️ GIF 表情"],
             ["boosters", "💰 加倍 / 道具"],
           ] as [Tab, string][]).map(([k, label]) => (
             <button
@@ -121,6 +168,36 @@ function Shop() {
             </button>
           ))}
         </div>
+
+        {tab === "gifs" && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {gifs.length === 0 && (
+              <div className="col-span-full text-center text-sm text-muted-foreground py-8">尚未上架任何 GIF 表情</div>
+            )}
+            {gifs.map((g) => {
+              const owns = ownedGifIds.has(g.id);
+              const canAfford = gems >= g.gem_price;
+              return (
+                <div key={g.id} className="border-brutal shadow-brutal rounded-2xl bg-card overflow-hidden">
+                  <div className="aspect-square bg-black grid place-items-center">
+                    <img src={g.gif_url} alt={g.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <div className="p-2">
+                    <div className="font-bold text-sm truncate">{g.name}</div>
+                    <div className="text-[10px] text-muted-foreground mb-1">{g.display_mode === "fullscreen" ? "全螢幕蓋版" : "底部小條"}</div>
+                    <button
+                      onClick={() => purchaseGif(g)}
+                      disabled={owns || !canAfford || busy === `gif:${g.id}`}
+                      className="w-full border-2 border-foreground rounded-lg py-1.5 text-xs font-bold bg-primary text-primary-foreground disabled:opacity-50 hover:translate-y-0.5"
+                    >
+                      {owns ? "✓ 已擁有" : busy === `gif:${g.id}` ? "…" : `${g.gem_price} 💎`}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {tab === "avatars" && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
