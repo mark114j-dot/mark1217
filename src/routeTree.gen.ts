@@ -18,6 +18,7 @@ import { Route as ArcadeRouteImport } from './routes/arcade'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as PlaySlugRouteImport } from './routes/play.$slug'
+import { Route as AdminEmotesRouteImport } from './routes/admin.emotes'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
@@ -66,6 +67,11 @@ const PlaySlugRoute = PlaySlugRouteImport.update({
   path: '/play/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEmotesRoute = AdminEmotesRouteImport.update({
+  id: '/admin/emotes',
+  path: '/admin/emotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
   id: '/admin/announcements',
   path: '/admin/announcements',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
   '/room/$code': typeof RoomCodeRoute
   '/mini/$type/$code': typeof MiniTypeCodeRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/studio'
     | '/admin/announcements'
+    | '/admin/emotes'
     | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/studio'
     | '/admin/announcements'
+    | '/admin/emotes'
     | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/studio'
     | '/admin/announcements'
+    | '/admin/emotes'
     | '/play/$slug'
     | '/room/$code'
     | '/mini/$type/$code'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRoute
   StudioRoute: typeof StudioRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
+  AdminEmotesRoute: typeof AdminEmotesRoute
   PlaySlugRoute: typeof PlaySlugRoute
   RoomCodeRoute: typeof RoomCodeRoute
   MiniTypeCodeRoute: typeof MiniTypeCodeRoute
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/emotes': {
+      id: '/admin/emotes'
+      path: '/admin/emotes'
+      fullPath: '/admin/emotes'
+      preLoaderRoute: typeof AdminEmotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/announcements': {
       id: '/admin/announcements'
       path: '/admin/announcements'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRoute,
   StudioRoute: StudioRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
+  AdminEmotesRoute: AdminEmotesRoute,
   PlaySlugRoute: PlaySlugRoute,
   RoomCodeRoute: RoomCodeRoute,
   MiniTypeCodeRoute: MiniTypeCodeRoute,
@@ -271,13 +292,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
