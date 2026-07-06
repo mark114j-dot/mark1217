@@ -151,7 +151,7 @@ function Index() {
         <div className="flex justify-end mb-2">
           <select
             value={lang}
-            onChange={(e) => { setLang(e.target.value); setStoredLang(e.target.value); }}
+            onChange={(e) => setLang(e.target.value)}
             className="border-brutal rounded-lg px-2 py-1 text-xs bg-card"
             title="語言 / Language"
           >
