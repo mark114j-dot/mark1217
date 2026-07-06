@@ -130,6 +130,38 @@ function Index() {
           </p>
         </motion.div>
 
+        {announcements.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {announcements.map((a) => {
+              const style = a.kind === "urgent" ? "bg-red-100" :
+                a.kind === "maintenance" ? "bg-amber-100" :
+                a.kind === "event" ? "bg-fuchsia-100" : "bg-sky-100";
+              const label = a.kind === "urgent" ? "🚨 緊急" : a.kind === "maintenance" ? "🛠️ 維護"
+                : a.kind === "event" ? "🎉 活動" : "📣 公告";
+              return (
+                <div key={a.id} className={`border-brutal shadow-brutal-sm rounded-2xl p-3 ${style}`}>
+                  <div className="text-xs font-bold">{label}</div>
+                  <div className="font-display font-bold">{a.title}</div>
+                  <div className="text-sm whitespace-pre-wrap mt-1">{a.body}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-end mb-2">
+          <select
+            value={lang}
+            onChange={(e) => { setLang(e.target.value); setStoredLang(e.target.value); }}
+            className="border-brutal rounded-lg px-2 py-1 text-xs bg-card"
+            title="語言 / Language"
+          >
+            {Array.from(new Map(COUNTRIES.map((c) => [c.lang, c])).values()).map((c) => (
+              <option key={c.lang} value={c.lang}>{c.flag} {c.lang}</option>
+            ))}
+          </select>
+        </div>
+
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1, transition: { delay: 0.1 } }}
