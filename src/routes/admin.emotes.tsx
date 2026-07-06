@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { checkAdmin } from "@/lib/studio.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listEmotesAdmin, upsertEmote, deleteEmote, adminAddGems,
   type ShopEmote,
@@ -51,6 +52,30 @@ function EmoteAdmin() {
   const [editing, setEditing] = useState<string | null>(null);
   const [gemAmt, setGemAmt] = useState(100);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  async function uploadGif(file: File) {
+    if (!/\.(gif|png|jpe?g|webp)$/i.test(file.name)) {
+      toast.error("僅支援 GIF / PNG / JPG / WEBP");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) { toast.error("檔案不能超過 8MB"); return; }
+    setUploading(true);
+    try {
+      const path = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error: upErr } = await supabase.storage.from("emotes").upload(path, file, {
+        cacheControl: "31536000", upsert: false, contentType: file.type || "image/gif",
+      });
+      if (upErr) throw upErr;
+      // Bucket is private; sign a very long-lived URL (≈20 years)
+      const { data: signed, error: sErr } = await supabase.storage.from("emotes")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 20);
+      if (sErr) throw sErr;
+      setDraft((d) => ({ ...d, gif_url: signed!.signedUrl, name: d.name || file.name.replace(/\.[^.]+$/, "") }));
+      toast.success("已上傳");
+    } catch (e: any) { toast.error(e.message || "上傳失敗"); }
+    finally { setUploading(false); }
+  }
 
   async function refresh() {
     try { setRows(await listFn()); } catch (e: any) { toast.error(e.message); }
@@ -98,6 +123,13 @@ function EmoteAdmin() {
               placeholder="名稱（例：爆笑）" className="border-brutal rounded-lg px-2 py-1.5 bg-input" />
             <input value={draft.gif_url ?? ""} onChange={(e) => setDraft({ ...draft, gif_url: e.target.value })}
               placeholder="GIF URL（https:// 或 data:）" className="border-brutal rounded-lg px-2 py-1.5 bg-input" />
+            <label className="col-span-full border-brutal rounded-lg px-2 py-2 bg-yellow-50 text-xs cursor-pointer flex items-center gap-2">
+              <span className="font-bold">📤 從電腦上傳 GIF：</span>
+              <input type="file" accept="image/gif,image/png,image/jpeg,image/webp"
+                onChange={(e) => e.target.files?.[0] && uploadGif(e.target.files[0])}
+                disabled={uploading} className="flex-1" />
+              {uploading && <span>上傳中…</span>}
+            </label>
             <input type="number" min={0} value={draft.gem_price ?? 0}
               onChange={(e) => setDraft({ ...draft, gem_price: Number(e.target.value) })}
               placeholder="寶石價格" className="border-brutal rounded-lg px-2 py-1.5 bg-input" />
