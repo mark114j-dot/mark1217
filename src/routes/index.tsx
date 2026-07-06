@@ -10,7 +10,7 @@ import { MusicToggle } from "@/components/MusicToggle";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin } from "@/lib/studio.functions";
-import { COUNTRIES, getStoredLang, setStoredLang } from "@/lib/i18n";
+import { COUNTRIES, useLang, useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -32,9 +32,8 @@ function Index() {
   const [isAdmin, setIsAdmin] = useState(false);
   const checkFn = useServerFn(checkAdmin);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; kind: string; title: string; body: string }>>([]);
-  const [lang, setLang] = useState<string>("zh-Hant");
-
-  useEffect(() => { setLang(getStoredLang()); }, []);
+  const [lang, setLang] = useLang();
+  const T = useT();
   useEffect(() => {
     (async () => {
       const { data } = await supabase
