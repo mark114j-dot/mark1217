@@ -6,6 +6,10 @@ import { MINI_GAMES } from "@/lib/miniGames";
 import { getClientId, getSavedName, getSavedAvatar, makeRoomCode, saveName } from "@/lib/game";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import { useServerFn } from "@tanstack/react-start";
+import { checkAdmin, deleteGame } from "@/lib/studio.functions";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/games")({
   component: GamesHub,
@@ -23,18 +27,40 @@ function GamesHub() {
   const [code, setCode] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [customGames, setCustomGames] = useState<any[]>([]);
+  const T = useT();
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const checkFn = useServerFn(checkAdmin);
+  const delFn = useServerFn(deleteGame);
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    checkFn().then((r: any) => setIsAdmin(!!r.isAdmin)).catch(() => setIsAdmin(false));
+  }, [user]);
+
+  async function refresh() {
+    const { data } = await supabase
+      .from("games")
+      .select("id,slug,name,emoji,description,cover_image_url,html_content,play_url")
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+    setCustomGames((data ?? []).filter((g: any) => g.html_content || g.play_url));
+  }
+
+  async function handleDelete(g: { id: string; name: string }) {
+    if (!confirm(`${T("confirm_delete")}\n\n「${g.name}」`)) return;
+    try {
+      await delFn({ data: { id: g.id } });
+      toast.success("已刪除");
+      setCustomGames((rows) => rows.filter((r) => r.id !== g.id));
+    } catch (e: any) {
+      toast.error(e.message || "刪除失敗");
+    }
+  }
 
   useEffect(() => {
     getClientId();
     setName(getSavedName());
-    (async () => {
-      const { data } = await supabase
-        .from("games")
-        .select("id,slug,name,emoji,description,cover_image_url,html_content,play_url")
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
-      setCustomGames((data ?? []).filter((g: any) => g.html_content || g.play_url));
-    })();
+    refresh();
   }, []);
 
   async function createRoom(gameId: string) {
@@ -73,14 +99,14 @@ function GamesHub() {
           <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 小遊戲大廳</h1>
+          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 {T("hub_title")}</h1>
         </div>
 
         <div className="bg-card border-brutal shadow-brutal rounded-2xl p-4 mb-6 grid sm:grid-cols-2 gap-3">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="你的名字"
+              placeholder={T("your_name")}
             maxLength={16}
             className="border-2 border-foreground/40 rounded-lg px-3 py-2 focus:outline-none focus:border-foreground"
           />
@@ -88,12 +114,12 @@ function GamesHub() {
             <input
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="輸入房號加入"
+                placeholder={T("room_code")}
               maxLength={6}
               className="flex-1 border-2 border-foreground/40 rounded-lg px-3 py-2 focus:outline-none focus:border-foreground font-mono uppercase"
             />
             <button onClick={joinRoom} className="border-brutal shadow-brutal-sm rounded-lg bg-primary text-primary-foreground px-4 font-bold hover:translate-y-0.5 hover:shadow-none transition">
-              加入
+                {T("join")}
             </button>
           </div>
         </div>
@@ -123,23 +149,33 @@ function GamesHub() {
 
         {customGames.length > 0 && (
           <>
-            <h2 className="font-display text-2xl font-black mt-8 mb-3">🛠️ 工作室發布</h2>
+            <h2 className="font-display text-2xl font-black mt-8 mb-3">🛠️ {T("studio_pub")}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {customGames.map((g, i) => (
-                <Link
-                  key={g.id}
-                  to="/play/$slug"
-                  params={{ slug: g.slug }}
-                  className="border-brutal shadow-brutal rounded-2xl p-4 bg-card hover:translate-y-1 hover:shadow-none transition text-left overflow-hidden"
-                >
-                  {g.cover_image_url ? (
-                    <img src={g.cover_image_url} alt="" className="w-full h-24 object-cover rounded mb-2" />
-                  ) : (
-                    <div className="text-4xl mb-2">{g.emoji ?? "🎮"}</div>
+                <div key={g.id} className="relative">
+                  <Link
+                    to="/play/$slug"
+                    params={{ slug: g.slug }}
+                    className="block border-brutal shadow-brutal rounded-2xl p-4 bg-card hover:translate-y-1 hover:shadow-none transition text-left overflow-hidden"
+                  >
+                    {g.cover_image_url ? (
+                      <img src={g.cover_image_url} alt="" className="w-full h-24 object-cover rounded mb-2" />
+                    ) : (
+                      <div className="text-4xl mb-2">{g.emoji ?? "🎮"}</div>
+                    )}
+                    <div className="font-display font-bold text-base truncate">{g.name}</div>
+                    <div className="text-xs text-muted-foreground line-clamp-2">{g.description}</div>
+                  </Link>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(g); }}
+                      title={T("delete")}
+                      className="absolute top-1.5 right-1.5 border-brutal shadow-brutal-sm rounded-lg bg-red-100 text-red-800 text-xs font-bold px-2 py-0.5 hover:translate-y-0.5 hover:shadow-none transition"
+                    >
+                      🗑
+                    </button>
                   )}
-                  <div className="font-display font-bold text-base truncate">{g.name}</div>
-                  <div className="text-xs text-muted-foreground line-clamp-2">{g.description}</div>
-                </Link>
+                </div>
               ))}
             </div>
           </>
