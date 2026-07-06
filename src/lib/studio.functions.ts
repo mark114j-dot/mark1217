@@ -115,6 +115,19 @@ export const deleteSession = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Delete a published/draft game (admin only). Cleans up related game_versions.
+export const deleteGame = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context);
+    await context.supabase.from("game_versions").delete().eq("game_id", data.id);
+    await context.supabase.from("studio_sessions").update({ game_id: null }).eq("game_id", data.id);
+    const { error } = await context.supabase.from("games").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const duplicateSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)

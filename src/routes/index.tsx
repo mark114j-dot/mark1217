@@ -10,7 +10,7 @@ import { MusicToggle } from "@/components/MusicToggle";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin } from "@/lib/studio.functions";
-import { COUNTRIES, getStoredLang, setStoredLang } from "@/lib/i18n";
+import { COUNTRIES, useLang, useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -32,9 +32,8 @@ function Index() {
   const [isAdmin, setIsAdmin] = useState(false);
   const checkFn = useServerFn(checkAdmin);
   const [announcements, setAnnouncements] = useState<Array<{ id: string; kind: string; title: string; body: string }>>([]);
-  const [lang, setLang] = useState<string>("zh-Hant");
-
-  useEffect(() => { setLang(getStoredLang()); }, []);
+  const [lang, setLang] = useLang();
+  const T = useT();
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -152,7 +151,7 @@ function Index() {
         <div className="flex justify-end mb-2">
           <select
             value={lang}
-            onChange={(e) => { setLang(e.target.value); setStoredLang(e.target.value); }}
+            onChange={(e) => setLang(e.target.value)}
             className="border-brutal rounded-lg px-2 py-1 text-xs bg-card"
             title="語言 / Language"
           >
@@ -168,18 +167,18 @@ function Index() {
           className="bg-card border-brutal shadow-brutal rounded-3xl p-6 space-y-5"
         >
           <label className="block">
-            <span className="text-sm font-semibold mb-1.5 block">你的名字</span>
+            <span className="text-sm font-semibold mb-1.5 block">{T("your_name")}</span>
             <input
               value={name}
               maxLength={16}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：小明"
+              placeholder={T("your_name")}
               className="w-full border-brutal rounded-xl px-4 py-3 bg-input focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </label>
 
           <div>
-            <span className="text-sm font-semibold mb-1.5 block">選擇你的角色</span>
+            <span className="text-sm font-semibold mb-1.5 block">{T("pick_avatar")}</span>
             <div className="grid grid-cols-8 gap-1.5">
               {AVATARS.map((a) => (
                 <button
@@ -203,12 +202,12 @@ function Index() {
             disabled={loading !== null}
             className="w-full border-brutal shadow-brutal-sm rounded-xl bg-primary text-primary-foreground font-display font-bold text-lg py-3 hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
           >
-            {loading === "create" ? "建立中…" : "建立新房間 →"}
+            {loading === "create" ? "…" : `${T("create_room")} →`}
           </button>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-foreground/20" />
-            <span className="text-xs text-muted-foreground">或</span>
+            <span className="text-xs text-muted-foreground">{T("or")}</span>
             <div className="flex-1 h-px bg-foreground/20" />
           </div>
 
@@ -217,7 +216,7 @@ function Index() {
               value={code}
               maxLength={5}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="房間代碼"
+              placeholder={T("room_code")}
               className="flex-1 border-brutal rounded-xl px-4 py-3 bg-input font-mono tracking-widest text-center uppercase focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
@@ -225,7 +224,7 @@ function Index() {
               disabled={loading !== null}
               className="border-brutal shadow-brutal-sm rounded-xl bg-accent text-accent-foreground font-display font-bold px-5 hover:translate-y-0.5 hover:shadow-none transition disabled:opacity-50"
             >
-              加入
+              {T("join")}
             </button>
           </div>
         </motion.div>
