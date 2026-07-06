@@ -10,6 +10,7 @@ import { MusicToggle } from "@/components/MusicToggle";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin } from "@/lib/studio.functions";
+import { COUNTRIES, getStoredLang, setStoredLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -30,6 +31,21 @@ function Index() {
   const { user, profile } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const checkFn = useServerFn(checkAdmin);
+  const [announcements, setAnnouncements] = useState<Array<{ id: string; kind: string; title: string; body: string }>>([]);
+  const [lang, setLang] = useState<string>("zh-Hant");
+
+  useEffect(() => { setLang(getStoredLang()); }, []);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("announcements")
+        .select("id,kind,title,body,block_play,active")
+        .eq("active", true).eq("block_play", false)
+        .order("created_at", { ascending: false }).limit(5);
+      if (data) setAnnouncements(data as any);
+    })();
+  }, []);
+
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
     checkFn().then((r: any) => setIsAdmin(!!r.isAdmin)).catch(() => setIsAdmin(false));
