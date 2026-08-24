@@ -57,6 +57,24 @@ function PlayGame() {
   const [effects, setEffects] = useState<BroadcastEvent[]>([]);
   const seenRef = useRef<Set<string>>(new Set());
 
+  // ---- Multiplayer room ----
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [netPlayers, setNetPlayers] = useState<NetPlayer[]>([]);
+  const [netStatus, setNetStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const roomCode = useMemo(() => search.room ?? randomRoomCode(), [search.room]);
+  useEffect(() => {
+    if (!search.room) navigate({ search: { room: roomCode }, replace: true });
+  }, [search.room, roomCode]);
+
+  const meIdentity = useMemo(() => ({
+    id: getClientId(),
+    name: (user?.user_metadata?.username as string) ?? user?.email?.split("@")[0] ?? "玩家",
+    avatar: (user?.user_metadata?.avatar as string) ?? "🐱",
+  }), [user]);
+
+
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
