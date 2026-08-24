@@ -544,14 +544,14 @@ function StudioWorkspace() {
                 {/* 3-column HTML/CSS/JS editor */}
                 <div className="border border-foreground/15 rounded-lg p-2 bg-muted/20">
                   <div className="flex items-center justify-between mb-1">
-                    <div className="text-[11px] font-bold">🎛️ 手動程式碼（HTML / CSS / JS）</div>
-                    <div className="text-[10px] text-muted-foreground">三格可只填一個</div>
+                    <div className="text-[11px] font-bold">🎛️ 手動程式碼（HTML / CSS / JS / 多人連線）</div>
+                    <div className="text-[10px] text-muted-foreground">可只填一格</div>
                   </div>
                   <div className="flex gap-1 mb-1">
-                    {(["html", "css", "js"] as const).map((k) => (
+                    {(["html", "css", "js", "mp"] as const).map((k) => (
                       <button key={k} onClick={() => setCodeTab(k)}
                         className={`text-[11px] border rounded px-2 py-0.5 ${codeTab === k ? "bg-primary text-primary-foreground border-primary" : "border-foreground/30 bg-card"}`}>
-                        {k === "html" ? "HTML" : k === "css" ? "CSS" : "JS"}
+                        {k === "html" ? "HTML" : k === "css" ? "CSS" : k === "js" ? "JS" : "🌐 連線 JS"}
                         {parts[k].trim() && <span className="ml-1">●</span>}
                       </button>
                     ))}
@@ -562,21 +562,32 @@ function StudioWorkspace() {
                     placeholder={
                       codeTab === "html" ? "<div id='app'>Hello</div>" :
                       codeTab === "css" ? "body { background: #111; color: #fff; }" :
-                      "console.log('hi'); // 前端 JS"
+                      codeTab === "js" ? "console.log('hi'); // 前端 JS" :
+                      "NET.ready(({me,players}) => {\n  NET.on('players', list => console.log(list));\n  NET.on('move', e => applyMove(e.data));\n});\n// 送出動作：NET.send('move', {x:1,y:2})\n// 共享狀態：NET.setState({board}) / NET.getState()"
                     }
                     rows={6}
                     className="w-full border-brutal rounded px-2 py-1 bg-input font-mono text-[11px]"
                   />
+                  {codeTab === "mp" && (
+                    <div className="text-[10px] text-muted-foreground mt-1 leading-relaxed bg-card border border-foreground/15 rounded p-1.5">
+                      平台已自動注入 <code>window.NET</code>（不需要自己填 Supabase 金鑰）：<br />
+                      <code>NET.ready(cb)</code>、<code>NET.me()</code>、<code>NET.players()</code>、<code>NET.isHost()</code>、
+                      <code>NET.send(type,data)</code>、<code>NET.on(type,cb)</code>、
+                      <code>NET.setState(patch)</code>／<code>NET.getState()</code>、
+                      <code>NET.setReady(true)</code>、<code>NET.start()</code>。<br />
+                      房間、玩家同步、即時廣播、斷線重連都由平台負責，玩家只要開同一個房號連結就能一起玩。
+                    </div>
+                  )}
                   <div className="flex gap-1 mt-1">
                     <button
                       onClick={() => {
-                        const { html, css, js } = parts;
-                        if (!html.trim() && !css.trim() && !js.trim()) {
+                        const { html, css, js, mp } = parts;
+                        if (!html.trim() && !css.trim() && !js.trim() && !mp.trim()) {
                           toast.error("至少填入一個框");
                           return;
                         }
-                        const composed = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${spec.name ?? "AI Game"}</title><style>html,body{margin:0;padding:0;height:100%;font-family:system-ui,sans-serif;}${css}</style></head><body>${html}<script>(function(){try{${js}}catch(e){console.error(e);}})();<\/script></body></html>`;
-                        const nextExtras = { ...(spec.extras ?? {}), parts: { html, css, js } };
+                        const composed = composeGameHtml({ title: spec.name ?? "Game", html, css, js, mp });
+                        const nextExtras = { ...(spec.extras ?? {}), parts: { html, css, js, mp }, multiplayer: !!mp.trim() };
                         const nextSpec = { ...spec, html_content: composed, extras: nextExtras, generated_at: new Date().toISOString() };
                         setSpec(nextSpec);
                         persistSession({ draft_spec: nextSpec });
