@@ -17,6 +17,7 @@ import {
   type StudioDraftSpec,
   type StudioMessage,
 } from "@/lib/studio.functions";
+import { composeGameHtml } from "@/lib/netShim";
 
 export const Route = createFileRoute("/studio")({
   component: StudioPage,
@@ -597,7 +598,7 @@ function StudioWorkspace() {
                     >⚙️ 組合並套用</button>
                     <button
                       onClick={() => {
-                        setParts({ html: "", css: "", js: "" });
+                        setParts({ html: "", css: "", js: "", mp: "" });
                         const nextExtras = { ...(spec.extras ?? {}), parts: undefined };
                         const nextSpec = { ...spec, extras: nextExtras };
                         setSpec(nextSpec);
