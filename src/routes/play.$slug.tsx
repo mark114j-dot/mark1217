@@ -1,14 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Smile } from "lucide-react";
+import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
 import { getClientId } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
+import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 
 export const Route = createFileRoute("/play/$slug")({
   component: PlayGame,
+  validateSearch: (s: Record<string, unknown>) => ({
+    room: typeof s.room === "string" && s.room ? s.room.toUpperCase().slice(0, 8) : undefined,
+  }),
   head: ({ params }) => ({
-    meta: [{ title: `遊玩 ${params.slug} — 畫聊 Doodle` }],
+    meta: [
+      { title: `遊玩 ${params.slug} — 畫聊 Doodle` },
+      { name: "description", content: `線上多人遊玩 ${params.slug}，開房間邀請朋友一起同步對戰。` },
+      { property: "og:title", content: `遊玩 ${params.slug} — 畫聊 Doodle` },
+      { property: "og:description", content: `線上多人遊玩 ${params.slug}，開房間邀請朋友一起同步對戰。` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
   }),
 });
 
@@ -45,6 +56,24 @@ function PlayGame() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [effects, setEffects] = useState<BroadcastEvent[]>([]);
   const seenRef = useRef<Set<string>>(new Set());
+
+  // ---- Multiplayer room ----
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [netPlayers, setNetPlayers] = useState<NetPlayer[]>([]);
+  const [netStatus, setNetStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const roomCode = useMemo(() => search.room ?? randomRoomCode(), [search.room]);
+  useEffect(() => {
+    if (!search.room) navigate({ search: { room: roomCode }, replace: true });
+  }, [search.room, roomCode]);
+
+  const meIdentity = useMemo(() => ({
+    id: getClientId(),
+    name: (user?.user_metadata?.username as string) ?? user?.email?.split("@")[0] ?? "玩家",
+    avatar: (user?.user_metadata?.avatar as string) ?? "🐱",
+  }), [user]);
+
 
   useEffect(() => {
     (async () => {
@@ -87,10 +116,10 @@ function PlayGame() {
   useEffect(() => {
     if (!slug) return;
     const channel = supabase
-      .channel(`emotes:${slug}`)
+      .channel(`emotes:${slug}:${roomCode}`)
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "emote_broadcasts",
-        filter: `room_code=eq.${slug}`,
+        filter: `room_code=eq.${slug}:${roomCode}`,
       }, (payload) => {
         const ev = payload.new as BroadcastEvent;
         if (seenRef.current.has(ev.id)) return;
@@ -100,13 +129,30 @@ function PlayGame() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [slug]);
+  }, [slug, roomCode]);
+
+  // Multiplayer bridge: the sandboxed game talks to us, we do the networking.
+  useEffect(() => {
+    if (!game || blockAnnouncement) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const dispose = createNetHost({
+      iframe,
+      roomCode,
+      gameType: `game:${game.slug}`,
+      me: meIdentity,
+      onPlayers: setNetPlayers,
+      onStatus: setNetStatus,
+    });
+    return dispose;
+  }, [game?.id, roomCode, blockAnnouncement, meIdentity]);
+
 
   async function sendEmote(e: OwnedEmote) {
     if (!user || !e.shop_emotes) return;
     setPickerOpen(false);
     await supabase.from("emote_broadcasts").insert({
-      room_code: slug,
+      room_code: `${slug}:${roomCode}`,
       emote_id: e.shop_emotes.id,
       gif_url: e.shop_emotes.gif_url,
       display_mode: e.shop_emotes.display_mode,
@@ -192,9 +238,36 @@ function PlayGame() {
           </button>
         )}
       </header>
+      <div className="border-b border-foreground/15 px-4 py-1.5 flex items-center gap-2 bg-secondary/30 text-xs flex-wrap">
+        <span className="font-bold">🏠 房號</span>
+        <code className="font-mono font-bold tracking-widest border-brutal rounded px-2 py-0.5 bg-card">{roomCode}</code>
+        <button
+          onClick={() => {
+            navigator.clipboard?.writeText(`${window.location.origin}/play/${slug}?room=${roomCode}`);
+          }}
+          className="border-brutal shadow-brutal-sm rounded px-2 py-0.5 bg-card font-bold inline-flex items-center gap-1"
+        >
+          <Copy className="w-3 h-3" /> 複製邀請連結
+        </button>
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <Users className="w-3.5 h-3.5" /> {netPlayers.length || 1} 人在房內
+        </span>
+        <span className="flex-1" />
+        <span className={netStatus === "connected" ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
+          {netStatus === "connected" ? "● 已連線" : netStatus === "connecting" ? "○ 連線中…" : "● 已斷線"}
+        </span>
+        {netPlayers.length > 0 && (
+          <span className="flex items-center gap-0.5">
+            {netPlayers.slice(0, 8).map((p) => (
+              <span key={p.id} title={p.name} className="text-base leading-none">{p.avatar}</span>
+            ))}
+          </span>
+        )}
+      </div>
       <div className="flex-1 relative bg-black">
         {game.play_url ? (
           <iframe
+            ref={iframeRef}
             src={game.play_url}
             title={game.name}
             className="absolute inset-0 w-full h-full"
@@ -205,6 +278,7 @@ function PlayGame() {
           />
         ) : game.html_content ? (
           <iframe
+            ref={iframeRef}
             srcDoc={game.html_content}
             title={game.name}
             className="absolute inset-0 w-full h-full bg-white"
