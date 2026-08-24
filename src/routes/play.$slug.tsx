@@ -278,6 +278,7 @@ function PlayGame() {
           />
         ) : game.html_content ? (
           <iframe
+            ref={iframeRef}
             srcDoc={game.html_content}
             title={game.name}
             className="absolute inset-0 w-full h-full bg-white"
