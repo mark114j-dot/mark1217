@@ -93,8 +93,8 @@ function StudioWorkspace() {
   const [readyPublish, setReadyPublish] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [mobileTab, setMobileTab] = useState<"list" | "chat" | "info">("chat");
-  const [codeTab, setCodeTab] = useState<"html" | "css" | "js">("html");
-  const [parts, setParts] = useState<{ html: string; css: string; js: string }>({ html: "", css: "", js: "" });
+  const [codeTab, setCodeTab] = useState<"html" | "css" | "js" | "mp">("html");
+  const [parts, setParts] = useState<{ html: string; css: string; js: string; mp: string }>({ html: "", css: "", js: "", mp: "" });
 
   async function refreshList() {
     try {
@@ -113,8 +113,8 @@ function StudioWorkspace() {
       setProgress(s.progress ?? 0);
       setLastQuestions([]); setLastSuggestions([]);
       setReadyBuild(false); setReadyPublish(false);
-      const p = ((s.draft_spec?.extras as any)?.parts) ?? { html: "", css: "", js: "" };
-      setParts({ html: p.html ?? "", css: p.css ?? "", js: p.js ?? "" });
+      const p = ((s.draft_spec?.extras as any)?.parts) ?? { html: "", css: "", js: "", mp: "" };
+      setParts({ html: p.html ?? "", css: p.css ?? "", js: p.js ?? "", mp: p.mp ?? "" });
     } catch (e: any) { toast.error(e.message); }
   }
 
