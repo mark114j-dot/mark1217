@@ -1,14 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Smile } from "lucide-react";
+import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
 import { getClientId } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
+import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 
 export const Route = createFileRoute("/play/$slug")({
   component: PlayGame,
+  validateSearch: (s: Record<string, unknown>) => ({
+    room: typeof s.room === "string" && s.room ? s.room.toUpperCase().slice(0, 8) : undefined,
+  }),
   head: ({ params }) => ({
-    meta: [{ title: `遊玩 ${params.slug} — 畫聊 Doodle` }],
+    meta: [
+      { title: `遊玩 ${params.slug} — 畫聊 Doodle` },
+      { name: "description", content: `線上多人遊玩 ${params.slug}，開房間邀請朋友一起同步對戰。` },
+      { property: "og:title", content: `遊玩 ${params.slug} — 畫聊 Doodle` },
+      { property: "og:description", content: `線上多人遊玩 ${params.slug}，開房間邀請朋友一起同步對戰。` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
   }),
 });
 
