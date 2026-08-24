@@ -116,10 +116,10 @@ function PlayGame() {
   useEffect(() => {
     if (!slug) return;
     const channel = supabase
-      .channel(`emotes:${slug}`)
+      .channel(`emotes:${slug}:${roomCode}`)
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "emote_broadcasts",
-        filter: `room_code=eq.${slug}`,
+        filter: `room_code=eq.${slug}:${roomCode}`,
       }, (payload) => {
         const ev = payload.new as BroadcastEvent;
         if (seenRef.current.has(ev.id)) return;
@@ -129,7 +129,7 @@ function PlayGame() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [slug]);
+  }, [slug, roomCode]);
 
   // Multiplayer bridge: the sandboxed game talks to us, we do the networking.
   useEffect(() => {
@@ -152,7 +152,7 @@ function PlayGame() {
     if (!user || !e.shop_emotes) return;
     setPickerOpen(false);
     await supabase.from("emote_broadcasts").insert({
-      room_code: slug,
+      room_code: `${slug}:${roomCode}`,
       emote_id: e.shop_emotes.id,
       gif_url: e.shop_emotes.gif_url,
       display_mode: e.shop_emotes.display_mode,
