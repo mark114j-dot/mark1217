@@ -131,6 +131,23 @@ function PlayGame() {
     return () => { supabase.removeChannel(channel); };
   }, [slug]);
 
+  // Multiplayer bridge: the sandboxed game talks to us, we do the networking.
+  useEffect(() => {
+    if (!game || blockAnnouncement) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const dispose = createNetHost({
+      iframe,
+      roomCode,
+      gameType: `game:${game.slug}`,
+      me: meIdentity,
+      onPlayers: setNetPlayers,
+      onStatus: setNetStatus,
+    });
+    return dispose;
+  }, [game?.id, roomCode, blockAnnouncement, meIdentity]);
+
+
   async function sendEmote(e: OwnedEmote) {
     if (!user || !e.shop_emotes) return;
     setPickerOpen(false);
