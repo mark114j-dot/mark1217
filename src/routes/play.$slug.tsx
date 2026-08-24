@@ -238,9 +238,36 @@ function PlayGame() {
           </button>
         )}
       </header>
+      <div className="border-b border-foreground/15 px-4 py-1.5 flex items-center gap-2 bg-secondary/30 text-xs flex-wrap">
+        <span className="font-bold">🏠 房號</span>
+        <code className="font-mono font-bold tracking-widest border-brutal rounded px-2 py-0.5 bg-card">{roomCode}</code>
+        <button
+          onClick={() => {
+            navigator.clipboard?.writeText(`${window.location.origin}/play/${slug}?room=${roomCode}`);
+          }}
+          className="border-brutal shadow-brutal-sm rounded px-2 py-0.5 bg-card font-bold inline-flex items-center gap-1"
+        >
+          <Copy className="w-3 h-3" /> 複製邀請連結
+        </button>
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <Users className="w-3.5 h-3.5" /> {netPlayers.length || 1} 人在房內
+        </span>
+        <span className="flex-1" />
+        <span className={netStatus === "connected" ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
+          {netStatus === "connected" ? "● 已連線" : netStatus === "connecting" ? "○ 連線中…" : "● 已斷線"}
+        </span>
+        {netPlayers.length > 0 && (
+          <span className="flex items-center gap-0.5">
+            {netPlayers.slice(0, 8).map((p) => (
+              <span key={p.id} title={p.name} className="text-base leading-none">{p.avatar}</span>
+            ))}
+          </span>
+        )}
+      </div>
       <div className="flex-1 relative bg-black">
         {game.play_url ? (
           <iframe
+            ref={iframeRef}
             src={game.play_url}
             title={game.name}
             className="absolute inset-0 w-full h-full"
