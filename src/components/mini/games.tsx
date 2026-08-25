@@ -651,6 +651,9 @@ export const GAME_COMPONENTS: Record<string, (p: GameProps) => ReactElement> = {
   speedsum: SpeedSum,
   dicepoker: DicePoker,
   oddone: OddOne,
+  battleship: Battleship,
+  points24: Points24,
+  primeclimb: PrimeClimb,
 };
 
 /* ───────────────────── 11. QuickDraw (牛仔對決) ───────────────────── */
@@ -1471,6 +1474,218 @@ function OddOne({ room, meId, update }: GameProps) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+/* ───────────────────── 24. Battleship (海戰棋) ───────────────────── */
+const BS_N = 6;
+function Battleship({ room, meId, update }: GameProps) {
+  const s = room.state as {
+    ships?: Record<string, number[]>;
+    shots?: Record<string, number[]>;
+    turn?: string;
+    winner?: string | null;
+  };
+  const p1 = room.players[0];
+  const p2 = room.players[1];
+  if (!p1 || !p2) return <WaitingForPlayers needed={2} />;
+  const ships = s.ships ?? {};
+  const shots = s.shots ?? {};
+  const myShips = ships[meId] ?? [];
+  const foe = meId === p1.client_id ? p2 : p1;
+  const foeShips = ships[foe.client_id] ?? [];
+  const myShots = shots[meId] ?? [];
+  const turn = s.turn ?? p1.client_id;
+  const winner = s.winner ?? null;
+  const placing = myShips.length < 4;
+
+  async function place(i: number) {
+    if (!placing || myShips.includes(i)) return;
+    sfx.click();
+    await update({ state: { ...s, ships: { ...ships, [meId]: [...myShips, i] }, turn } });
+  }
+  async function fire(i: number) {
+    if (placing || winner || turn !== meId || myShots.includes(i) || foeShips.length < 4) return;
+    const next = [...myShots, i];
+    const hit = foeShips.includes(i);
+    hit ? sfx.score() : sfx.click();
+    const won = foeShips.every((c) => next.includes(c));
+    if (won) sfx.win();
+    await update({
+      state: { ...s, shots: { ...shots, [meId]: next }, turn: foe.client_id, winner: won ? meId : null },
+      ...(won ? { players: addScore(room.players, meId, 1) } : {}),
+    });
+  }
+  async function reset() {
+    await update({ state: { ships: {}, shots: {}, turn: p1.client_id, winner: null } });
+  }
+
+  const cells = Array.from({ length: BS_N * BS_N }, (_, i) => i);
+  return (
+    <div className="space-y-3">
+      <Banner tone={winner ? "win" : "info"}>
+        {winner
+          ? `${room.players.find((p) => p.client_id === winner)?.name} 擊沉全部艦隊！🎉`
+          : placing
+            ? `佈署你的艦隊（${myShips.length}/4）`
+            : foeShips.length < 4
+              ? "等待對手佈署艦隊…"
+              : turn === meId
+                ? "輪到你開火 🎯"
+                : `等待 ${foe.name} 開火…`}
+      </Banner>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <div className="text-xs font-bold mb-1">我的海域</div>
+          <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${BS_N},minmax(0,1fr))` }}>
+            {cells.map((i) => {
+              const hit = (shots[foe.client_id] ?? []).includes(i);
+              const mine = myShips.includes(i);
+              return (
+                <button key={i} onClick={() => place(i)}
+                  className={`aspect-square rounded-lg border text-sm ${hit && mine ? "bg-destructive/70" : hit ? "bg-muted" : mine ? "bg-primary/70" : "bg-card"}`}>
+                  {hit ? (mine ? "💥" : "·") : mine ? "🚢" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs font-bold mb-1">敵方海域</div>
+          <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${BS_N},minmax(0,1fr))` }}>
+            {cells.map((i) => {
+              const shot = myShots.includes(i);
+              const hit = shot && foeShips.includes(i);
+              return (
+                <button key={i} onClick={() => fire(i)}
+                  className={`aspect-square rounded-lg border text-sm ${hit ? "bg-destructive/70" : shot ? "bg-muted" : "bg-card hover:bg-accent/30"}`}>
+                  {hit ? "💥" : shot ? "🌊" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {winner && (
+        <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold">再來一局</button>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────────── 25. 24 Points (算術 24 點) ───────────────────── */
+function Points24({ room, meId, update }: GameProps) {
+  const s = room.state as { nums?: number[]; solvedBy?: string | null; answer?: string };
+  const nums = s.nums ?? [];
+  const [expr, setExpr] = useState("");
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+
+  async function deal() {
+    const n = Array.from({ length: 4 }, () => 1 + Math.floor(Math.random() * 9));
+    sfx.click();
+    setExpr("");
+    await update({ state: { nums: n, solvedBy: null, answer: "" } });
+  }
+  async function submit() {
+    if (!nums.length || s.solvedBy) return;
+    const used = (expr.match(/\d+/g) ?? []).map(Number).sort().join(",");
+    if (used !== [...nums].sort().join(",")) { sfx.lose(); return; }
+    let val: number;
+    try { val = Function(`"use strict";return (${expr.replace(/[^0-9+\-*/(). ]/g, "")})`)(); } catch { sfx.lose(); return; }
+    if (Math.abs(val - 24) > 1e-6) { sfx.lose(); return; }
+    sfx.win();
+    await update({ state: { ...s, solvedBy: meId, answer: expr }, players: addScore(room.players, meId, 1) });
+  }
+
+  const solver = room.players.find((p) => p.client_id === s.solvedBy);
+  return (
+    <div className="space-y-3">
+      <Banner tone={solver ? "win" : "info"}>
+        {solver ? `${solver.name} 先解出：${s.answer} = 24 🎉` : "用 + − × ÷ 和括號把四個數字算成 24"}
+      </Banner>
+      <div className="flex gap-2 justify-center">
+        {(nums.length ? nums : [0, 0, 0, 0]).map((n, i) => (
+          <div key={i} className="w-16 h-24 rounded-2xl border-brutal shadow-brutal-sm bg-card grid place-items-center text-3xl font-black">
+            {nums.length ? n : "?"}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 max-w-md mx-auto">
+        <input value={expr} onChange={(e) => setExpr(e.target.value)} placeholder="例：(3+5)*(4-1)"
+          className="flex-1 border-brutal rounded-xl px-3 py-2 bg-input font-mono" />
+        <button onClick={submit} className="border-brutal shadow-brutal-sm rounded-xl px-4 bg-primary text-primary-foreground font-bold">送出</button>
+      </div>
+      <button onClick={deal} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-secondary font-bold">🔄 發新的四張牌</button>
+    </div>
+  );
+}
+
+/* ───────────────────── 26. Prime Climb (質數攀登) ───────────────────── */
+const PRIMES = new Set([2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97]);
+function PrimeClimb({ room, meId, update }: GameProps) {
+  const s = room.state as { pos?: Record<string, number>; turn?: string; winner?: string | null; opts?: number[] };
+  if (room.players.length < 2) return <WaitingForPlayers needed={2} />;
+  const pos = s.pos ?? {};
+  const turn = s.turn ?? room.players[0].client_id;
+  const winner = s.winner ?? null;
+  const opts = s.opts ?? [];
+  const myPos = pos[meId] ?? 0;
+
+  async function roll() {
+    if (winner || turn !== meId || opts.length) return;
+    const three = Array.from({ length: 3 }, () => 2 + Math.floor(Math.random() * 96));
+    sfx.click();
+    await update({ state: { ...s, pos, turn, opts: three } });
+  }
+  async function pick(n: number) {
+    if (turn !== meId) return;
+    const ok = PRIMES.has(n);
+    const np = Math.max(0, myPos + (ok ? 3 : -1));
+    ok ? sfx.score() : sfx.lose();
+    const idx = room.players.findIndex((p) => p.client_id === meId);
+    const nextTurn = room.players[(idx + 1) % room.players.length].client_id;
+    const won = np >= 20;
+    if (won) sfx.win();
+    await update({
+      state: { pos: { ...pos, [meId]: np }, turn: nextTurn, opts: [], winner: won ? meId : null },
+      ...(won ? { players: addScore(room.players, meId, 1) } : {}),
+    });
+  }
+  async function reset() { await update({ state: { pos: {}, turn: room.players[0].client_id, opts: [], winner: null } }); }
+
+  return (
+    <div className="space-y-3">
+      <Banner tone={winner ? "win" : "info"}>
+        {winner ? `${room.players.find((p) => p.client_id === winner)?.name} 登頂！🎉`
+          : turn === meId ? (opts.length ? "選出質數 → 前進 3 格（選錯退 1 格）" : "輪到你，擲出三個數字")
+          : `等待 ${room.players.find((p) => p.client_id === turn)?.name}…`}
+      </Banner>
+      <div className="space-y-1.5 max-w-md mx-auto">
+        {room.players.map((p) => (
+          <div key={p.client_id} className="flex items-center gap-2 text-sm">
+            <span className="w-24 truncate font-bold">{p.avatar} {p.name}</span>
+            <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-primary" style={{ width: `${Math.min(100, ((pos[p.client_id] ?? 0) / 20) * 100)}%` }} />
+            </div>
+            <span className="font-mono text-xs">{pos[p.client_id] ?? 0}/20</span>
+          </div>
+        ))}
+      </div>
+      {opts.length > 0 ? (
+        <div className="flex gap-2 justify-center">
+          {opts.map((n, i) => (
+            <button key={i} onClick={() => pick(n)} disabled={turn !== meId}
+              className="w-20 h-20 rounded-2xl border-brutal shadow-brutal-sm bg-card text-2xl font-black disabled:opacity-50">
+              {n}
+            </button>
+          ))}
+        </div>
+      ) : !winner ? (
+        <button onClick={roll} disabled={turn !== meId}
+          className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-primary text-primary-foreground font-bold disabled:opacity-50">🔺 擲數字</button>
+      ) : (
+        <button onClick={reset} className="mx-auto block border-brutal shadow-brutal-sm rounded-xl px-6 py-2 bg-secondary font-bold">再來一局</button>
+      )}
     </div>
   );
 }
