@@ -105,29 +105,32 @@ function Index() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="flex items-center gap-2 mb-6">
+    <main className="min-h-screen px-4 py-8 sm:py-12">
+      <div className="w-full max-w-5xl mx-auto">
+        <div className="flex items-center gap-2 mb-8">
+          <span className="font-display font-bold text-lg tracking-tight">
+            畫<span className="text-primary">聊</span> <span className="text-muted-foreground font-medium text-sm">邏輯數感遊戲平台</span>
+          </span>
+          <span className="flex-1" />
           <MusicToggle />
-          <div className="ml-auto">
-            <AuthMenu />
-          </div>
+          <AuthMenu />
         </div>
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
+          initial={{ y: -16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="text-center mb-8"
         >
-          <div className="inline-block border-brutal shadow-brutal bg-secondary rounded-2xl px-5 py-2 -rotate-2 mb-4">
-            <span className="font-hand text-2xl">多人遊戲 • 即時對戰</span>
+          <div className="inline-flex items-center gap-2 rounded-full border-brutal bg-card px-4 py-1.5 mb-5 text-xs font-semibold text-muted-foreground shadow-brutal-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" /> 免安裝 · 免註冊 · 開瀏覽器就能對戰
           </div>
-          <h1 className="text-6xl font-display font-bold tracking-tight">
-            畫<span className="text-primary">聊</span>
+          <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight leading-tight">
+            免費線上多人 <span className="text-primary">益智小遊戲</span>
           </h1>
-          <p className="mt-3 text-muted-foreground">
-            畫一張圖，朋友來猜題 — 像 Skribbl，但更可愛
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            繪圖猜題、五子棋、海戰棋、算術 24 點、質數攀登…… 26 款即時連線遊戲，訓練邏輯、推理與數感。
           </p>
         </motion.div>
+
 
         {announcements.length > 0 && (
           <div className="space-y-2 mb-4">
