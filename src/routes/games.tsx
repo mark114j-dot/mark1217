@@ -188,7 +188,7 @@ function GamesHub() {
                 className="relative flex flex-col items-center"
               >
                 <button
-                  onClick={() => navigate({ to: "/play/$slug", params: { slug: g.slug } })}
+                  onClick={() => navigate({ to: "/play/$slug", params: { slug: g.slug }, search: { room: undefined } })}
                   className="group relative w-full aspect-square rounded-[22%] overflow-hidden border-brutal shadow-brutal bg-card hover:-translate-y-1 hover:shadow-none transition"
                   aria-label={g.name}
                 >
@@ -269,7 +269,7 @@ function GamesHub() {
               onClick={() => {
                 const slug = howTo.slug;
                 setHowTo(null);
-                navigate({ to: "/play/$slug", params: { slug } });
+                navigate({ to: "/play/$slug", params: { slug }, search: { room: undefined } });
               }}
               className="mt-4 w-full border-brutal shadow-brutal-sm rounded-lg bg-primary text-primary-foreground py-2 font-bold hover:translate-y-0.5 hover:shadow-none transition"
             >
