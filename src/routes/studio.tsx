@@ -18,6 +18,7 @@ import {
   type StudioMessage,
 } from "@/lib/studio.functions";
 import { composeGameHtml } from "@/lib/netShim";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/studio")({
   component: StudioPage,
@@ -80,6 +81,7 @@ function StudioWorkspace() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<StudioMessage[]>([]);
   const [spec, setSpec] = useState<StudioDraftSpec>({});
+  const [iconUploading, setIconUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [folderFilter, setFolderFilter] = useState<"all" | "draft" | "published" | "archived">("all");
   const [search, setSearch] = useState("");
