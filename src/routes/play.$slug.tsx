@@ -83,7 +83,10 @@ function PlayGame() {
         .eq("slug", slug).eq("status", "published").maybeSingle();
       if (error) setErr(error.message);
       else if (!data) setErr("找不到這款遊戲");
-      else setGame(data as any);
+      else {
+        setGame(data as any);
+        supabase.rpc("increment_game_play" as any, { _slug: slug }).then(() => {}, () => {});
+      }
       setLoading(false);
     })();
   }, [slug]);
