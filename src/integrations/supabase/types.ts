@@ -235,6 +235,7 @@ export type Database = {
           min_players: number
           modes: Json
           name: string
+          play_count: number
           play_url: string | null
           primitive: string
           slug: string
@@ -259,6 +260,7 @@ export type Database = {
           min_players?: number
           modes?: Json
           name: string
+          play_count?: number
           play_url?: string | null
           primitive?: string
           slug: string
@@ -283,6 +285,7 @@ export type Database = {
           min_players?: number
           modes?: Json
           name?: string
+          play_count?: number
           play_url?: string | null
           primitive?: string
           slug?: string
@@ -797,6 +800,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_game_play: { Args: { _slug: string }; Returns: undefined }
       spend_gems: {
         Args: { _amount: number; _client_id: string }
         Returns: number
