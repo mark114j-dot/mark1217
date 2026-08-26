@@ -629,18 +629,59 @@ function StudioWorkspace() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-muted-foreground mb-0.5">封面圖片 URL</label>
-                  <input
-                    type="url"
-                    value={spec.cover_image_url ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setSpec((s) => ({ ...s, cover_image_url: v }));
-                    }}
-                    onBlur={(e) => persistSession({ draft_spec: { ...spec, cover_image_url: e.currentTarget.value } })}
-                    placeholder="https://…/cover.png"
-                    className="w-full border-brutal rounded px-2 py-1 bg-input"
-                  />
+                  <label className="block text-muted-foreground mb-0.5">遊戲圖示（App 圖示）</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-14 h-14 shrink-0 rounded-[22%] overflow-hidden border border-foreground/20 bg-muted grid place-items-center text-2xl">
+                      {spec.cover_image_url
+                        ? <img src={spec.cover_image_url} alt="" className="w-full h-full object-cover" />
+                        : (spec.emoji ?? "🎮")}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={iconUploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.currentTarget.value = "";
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) { toast.error("圖片請小於 5MB"); return; }
+                          setIconUploading(true);
+                          try {
+                            const ext = (file.name.split(".").pop() || "png").toLowerCase();
+                            const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                            const { error: upErr } = await supabase.storage
+                              .from("game-icons").upload(path, file, { contentType: file.type, upsert: false });
+                            if (upErr) throw upErr;
+                            const { data: signed, error: sErr } = await supabase.storage
+                              .from("game-icons").createSignedUrl(path, 60 * 60 * 24 * 3650);
+                            if (sErr || !signed?.signedUrl) throw sErr ?? new Error("無法產生圖片連結");
+                            const nextSpec = { ...spec, cover_image_url: signed.signedUrl };
+                            setSpec(nextSpec);
+                            persistSession({ draft_spec: nextSpec });
+                            toast.success("圖示已上傳");
+                          } catch (err: any) {
+                            toast.error(err.message || "上傳失敗");
+                          } finally {
+                            setIconUploading(false);
+                          }
+                        }}
+                        className="w-full text-[11px]"
+                      />
+                      <input
+                        type="url"
+                        value={spec.cover_image_url ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setSpec((s) => ({ ...s, cover_image_url: v }));
+                        }}
+                        onBlur={(e) => persistSession({ draft_spec: { ...spec, cover_image_url: e.currentTarget.value } })}
+                        placeholder="或貼上圖片網址 https://…"
+                        className="w-full border-brutal rounded px-2 py-1 bg-input"
+                      />
+                    </div>
+                  </div>
+                  {iconUploading && <div className="text-[10px] text-muted-foreground mt-1">上傳中…</div>}
                 </div>
                 <div>
                   <label className="block text-muted-foreground mb-0.5">玩法說明</label>
