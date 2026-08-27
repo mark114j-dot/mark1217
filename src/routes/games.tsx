@@ -63,6 +63,7 @@ function GamesHub() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"hot" | "new" | "all">("hot");
   const [cat, setCat] = useState<string>("all");
+  const [onlyOffline, setOnlyOffline] = useState(false);
   const [howTo, setHowTo] = useState<PubGame | null>(null);
   const T = useT();
   const { user } = useAuth();
@@ -107,11 +108,12 @@ function GamesHub() {
   const list = useMemo(() => {
     let rows = games.slice();
     if (cat !== "all") rows = rows.filter((g) => (g.category ?? "misc") === cat);
+    if (onlyOffline) rows = rows.filter((g) => g.offline_ok);
     if (tab === "hot") rows.sort((a, b) => (b.play_count ?? 0) - (a.play_count ?? 0));
     else if (tab === "new") rows.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
     else rows.sort((a, b) => a.name.localeCompare(b.name));
     return rows;
-  }, [games, cat, tab]);
+  }, [games, cat, tab, onlyOffline]);
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
@@ -151,6 +153,15 @@ function GamesHub() {
             }`}
           >
             全部分類
+          </button>
+          <button
+            onClick={() => setOnlyOffline((v) => !v)}
+            title="不需網路也能玩的遊戲（進入網站仍需網路）"
+            className={`rounded-full px-3 py-1 text-xs font-bold border border-foreground/20 transition ${
+              onlyOffline ? "bg-emerald-600 text-white" : "bg-card hover:bg-muted"
+            }`}
+          >
+            📴 免連線
           </button>
           {cats.map((c) => (
             <button
@@ -199,6 +210,11 @@ function GamesHub() {
                     <div className="w-full h-full grid place-items-center text-4xl sm:text-5xl bg-gradient-to-br from-primary/15 to-secondary/20">
                       {g.emoji ?? "🎮"}
                     </div>
+                  )}
+                  {g.offline_ok && (
+                    <span className="absolute bottom-1 right-1 rounded-full bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5">
+                      📴 免連線
+                    </span>
                   )}
                   {tab !== "new" && isNew(g) && (
                     <span className="absolute top-1 left-1 rounded-full bg-secondary text-secondary-foreground text-[9px] font-black px-1.5 py-0.5">
