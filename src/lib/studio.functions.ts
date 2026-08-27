@@ -31,6 +31,7 @@ export type StudioDraftSpec = {
   play_url?: string;
   cover_image_url?: string;
   instructions?: string;
+  offline_ok?: boolean;
   generated_at?: string;
 };
 
@@ -224,6 +225,7 @@ export const publishSession = createServerFn({ method: "POST" })
           play_url: spec.play_url ?? null,
           cover_image_url: spec.cover_image_url ?? null,
           instructions: spec.instructions ?? null,
+          offline_ok: !!spec.offline_ok,
           status: "published",
         }).eq("id", gameId);
       if (eu) throw new Error(eu.message);
@@ -241,6 +243,7 @@ export const publishSession = createServerFn({ method: "POST" })
           play_url: spec.play_url ?? null,
           cover_image_url: spec.cover_image_url ?? null,
           instructions: spec.instructions ?? null,
+          offline_ok: !!spec.offline_ok,
           status: "published", version: 1,
           created_by: context.userId,
         }).select().single();

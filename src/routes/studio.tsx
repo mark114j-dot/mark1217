@@ -696,6 +696,25 @@ function StudioWorkspace() {
                     className="w-full border-brutal rounded px-2 py-1 bg-input"
                   />
                 </div>
+                <label className="flex items-start gap-2 rounded-lg border border-foreground/20 bg-muted/40 px-2 py-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!spec.offline_ok}
+                    onChange={(e) => {
+                      const v = e.target.checked;
+                      setSpec((s) => ({ ...s, offline_ok: v }));
+                      persistSession({ draft_spec: { ...spec, offline_ok: v } });
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-bold">📴 免連線（單機遊玩）</span>
+                    <span className="block text-[10px] text-muted-foreground">
+                      勾選後不會建立房間與連線，載入後即使斷網也能玩。
+                    </span>
+                  </span>
+                </label>
+
                 {(spec.html_content || spec.play_url) && (
                   <a
                     href={spec.play_url || undefined}
