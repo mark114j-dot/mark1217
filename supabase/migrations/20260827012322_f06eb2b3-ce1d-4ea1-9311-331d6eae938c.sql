@@ -1,0 +1,1 @@
+ALTER TABLE public.games ADD COLUMN IF NOT EXISTS offline_ok boolean NOT NULL DEFAULT false;

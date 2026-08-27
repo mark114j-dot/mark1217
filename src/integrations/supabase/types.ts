@@ -235,6 +235,7 @@ export type Database = {
           min_players: number
           modes: Json
           name: string
+          offline_ok: boolean
           play_count: number
           play_url: string | null
           primitive: string
@@ -260,6 +261,7 @@ export type Database = {
           min_players?: number
           modes?: Json
           name: string
+          offline_ok?: boolean
           play_count?: number
           play_url?: string | null
           primitive?: string
@@ -285,6 +287,7 @@ export type Database = {
           min_players?: number
           modes?: Json
           name?: string
+          offline_ok?: boolean
           play_count?: number
           play_url?: string | null
           primitive?: string
