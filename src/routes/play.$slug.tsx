@@ -26,7 +26,7 @@ export const Route = createFileRoute("/play/$slug")({
 type Game = {
   id: string; slug: string; name: string; emoji: string; description: string;
   html_content: string | null; play_url: string | null;
-  cover_image_url: string | null; instructions: string | null;
+  cover_image_url: string | null; instructions: string | null; offline_ok: boolean | null;
 };
 
 type Announcement = {
@@ -64,9 +64,11 @@ function PlayGame() {
   const [netPlayers, setNetPlayers] = useState<NetPlayer[]>([]);
   const [netStatus, setNetStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const roomCode = useMemo(() => search.room ?? randomRoomCode(), [search.room]);
+  const isOffline = !!game?.offline_ok;
   useEffect(() => {
+    if (isOffline) return;
     if (!search.room) navigate({ search: { room: roomCode }, replace: true });
-  }, [search.room, roomCode]);
+  }, [search.room, roomCode, isOffline]);
 
   const meIdentity = useMemo(() => ({
     id: getClientId(),
@@ -79,7 +81,7 @@ function PlayGame() {
     (async () => {
       const { data, error } = await supabase
         .from("games")
-        .select("id,slug,name,emoji,description,html_content,play_url,cover_image_url,instructions")
+        .select("id,slug,name,emoji,description,html_content,play_url,cover_image_url,instructions,offline_ok")
         .eq("slug", slug).eq("status", "published").maybeSingle();
       if (error) setErr(error.message);
       else if (!data) setErr("找不到這款遊戲");
@@ -117,7 +119,7 @@ function PlayGame() {
 
   // Realtime broadcast subscription per slug
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || isOffline) return;
     const channel = supabase
       .channel(`emotes:${slug}:${roomCode}`)
       .on("postgres_changes", {
@@ -132,11 +134,11 @@ function PlayGame() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [slug, roomCode]);
+  }, [slug, roomCode, isOffline]);
 
   // Multiplayer bridge: the sandboxed game talks to us, we do the networking.
   useEffect(() => {
-    if (!game || blockAnnouncement) return;
+    if (!game || blockAnnouncement || game.offline_ok) return;
     const iframe = iframeRef.current;
     if (!iframe) return;
     const dispose = createNetHost({
@@ -241,6 +243,12 @@ function PlayGame() {
           </button>
         )}
       </header>
+      {game.offline_ok ? (
+        <div className="border-b border-foreground/15 px-4 py-1.5 flex items-center gap-2 bg-emerald-50 text-xs text-emerald-800">
+          <span className="rounded-full bg-emerald-600 text-white font-bold px-2 py-0.5">📴 免連線</span>
+          <span>這款是單機遊戲，載入後即使斷網也能繼續玩。</span>
+        </div>
+      ) : (
       <div className="border-b border-foreground/15 px-4 py-1.5 flex items-center gap-2 bg-secondary/30 text-xs flex-wrap">
         <span className="font-bold">🏠 房號</span>
         <code className="font-mono font-bold tracking-widest border-brutal rounded px-2 py-0.5 bg-card">{roomCode}</code>
@@ -267,6 +275,7 @@ function PlayGame() {
           </span>
         )}
       </div>
+      )}
       <div className="flex-1 relative bg-black">
         {game.play_url ? (
           <iframe
