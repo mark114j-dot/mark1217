@@ -36,6 +36,7 @@ type PubGame = {
   created_at: string;
   html_content: string | null;
   play_url: string | null;
+  offline_ok: boolean | null;
 };
 
 const CAT_LABEL: Record<string, string> = {
@@ -78,7 +79,7 @@ function GamesHub() {
     (async () => {
       const { data } = await supabase
         .from("games")
-        .select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url")
+        .select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url,offline_ok")
         .eq("status", "published")
         .order("created_at", { ascending: false });
       setGames(((data ?? []) as any[]).filter((g) => g.html_content || g.play_url) as PubGame[]);
