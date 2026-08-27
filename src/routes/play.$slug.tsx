@@ -233,7 +233,7 @@ function PlayGame() {
           <div className="font-display font-bold truncate">{game.name}</div>
           <div className="text-xs text-muted-foreground truncate">{game.description}</div>
         </div>
-        {user && owned.length > 0 && (
+        {user && owned.length > 0 && !game.offline_ok && (
           <button
             onClick={() => setPickerOpen((v) => !v)}
             className="border-brutal shadow-brutal-sm rounded-lg p-1.5 bg-primary/10 hover:translate-y-0.5 hover:shadow-none transition"
