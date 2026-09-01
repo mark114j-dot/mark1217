@@ -8,7 +8,17 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/friends")({
   component: FriendsPage,
-  head: () => ({ meta: [{ title: "好友 · 畫聊" }] }),
+  head: () => ({
+    meta: [
+      { title: "好友清單與私訊 — 畫聊 Doodle" },
+      { name: "description", content: "管理畫聊 Doodle 的好友：搜尋玩家、送出好友邀請、查看誰在線上、私訊聊天，並直接加入朋友正在玩的遊戲房間。" },
+      { property: "og:title", content: "好友清單與私訊 — 畫聊 Doodle" },
+      { property: "og:description", content: "搜尋玩家、送出好友邀請、查看在線好友並私訊聊天，一鍵加入朋友的遊戲房間。" },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mark1217.lovable.app/friends" },
+    ],
+    links: [{ rel: "canonical", href: "https://mark1217.lovable.app/friends" }],
+  }),
 });
 
 type ProfileRow = {
@@ -272,12 +282,14 @@ function FriendsPage() {
                       <span className="flex-1 font-semibold text-sm truncate">{o?.username ?? "玩家"}</span>
                       <button
                         onClick={() => respond(f, true)}
+                        aria-label="接受好友邀請"
                         className="border-2 border-foreground rounded-lg bg-primary text-primary-foreground px-2 py-1"
                       >
                         <Check className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => respond(f, false)}
+                        aria-label="拒絕好友邀請"
                         className="border-2 border-foreground/30 rounded-lg px-2 py-1"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -329,13 +341,14 @@ function FriendsPage() {
                           <DoorOpen className="w-3 h-3" /> {o.current_room_code}
                         </button>
                       )}
-                      <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                      <MessageCircle aria-hidden="true" className="w-3.5 h-3.5 text-muted-foreground" />
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           removeFriendship(f);
                         }}
                         title="刪除好友"
+                        aria-label="刪除好友"
                         className="text-muted-foreground hover:text-destructive"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -398,6 +411,7 @@ function FriendsPage() {
                 />
                 <button
                   onClick={sendDM}
+                  aria-label="送出訊息"
                   className="border-brutal shadow-brutal-sm rounded-lg bg-primary text-primary-foreground px-3 hover:translate-y-0.5 hover:shadow-none transition"
                 >
                   <Send className="w-4 h-4" />

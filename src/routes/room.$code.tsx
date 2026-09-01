@@ -24,7 +24,16 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/room/$code")({
   component: RoomPage,
   head: ({ params }) => ({
-    meta: [{ title: `房間 ${params.code} · 畫聊` }],
+    meta: [
+      { title: `遊戲房間 ${params.code} — 即時繪圖猜題｜畫聊 Doodle` },
+      { name: "description", content: `加入畫聊 Doodle 房間 ${params.code}，和朋友即時輪流畫畫猜題、聊天互動並累積分數，免安裝、開瀏覽器就能一起玩。` },
+      { property: "og:title", content: `遊戲房間 ${params.code} — 即時繪圖猜題` },
+      { property: "og:description", content: `輸入房號 ${params.code} 加入這場即時繪圖猜題對戰，和朋友輪流作畫搶答。` },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: `${"https://mark1217.lovable.app"}/room/${params.code}` },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: `${"https://mark1217.lovable.app"}/room/${params.code}` }],
   }),
 });
 
@@ -474,6 +483,7 @@ function RoomPage() {
 
   return (
     <main className="min-h-screen p-3 md:p-6 max-w-7xl mx-auto">
+      <h1 className="sr-only">遊戲房間 {code} — 即時繪圖猜題</h1>
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
@@ -625,12 +635,14 @@ function RoomPage() {
                   <span className="flex-1 font-semibold text-sm truncate">{r.requester_name}</span>
                   <button
                     onClick={() => decideRequest(r.id, true)}
+                    aria-label="同意加入房間"
                     className="border-2 border-foreground rounded-lg bg-primary text-primary-foreground px-2 py-1 hover:translate-y-0.5 transition"
                   >
                     <Check className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => decideRequest(r.id, false)}
+                    aria-label="拒絕加入房間"
                     className="border-2 border-foreground/30 rounded-lg px-2 py-1 hover:bg-muted transition"
                   >
                     <X className="w-3.5 h-3.5" />

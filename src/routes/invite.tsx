@@ -8,7 +8,17 @@ import { getClientId } from "@/lib/game";
 
 export const Route = createFileRoute("/invite")({
   component: InvitePage,
-  head: () => ({ meta: [{ title: "好友邀請 — 拿寶石" }] }),
+  head: () => ({
+    meta: [
+      { title: "好友邀請與排行榜 — 邀請朋友拿寶石｜畫聊 Doodle" },
+      { name: "description", content: "分享你的專屬邀請碼或連結，每成功邀請一位朋友加入畫聊 Doodle 就能領取寶石獎勵，並在每日、每週邀請排行榜上一較高下。" },
+      { property: "og:title", content: "好友邀請與排行榜 — 邀請朋友拿寶石" },
+      { property: "og:description", content: "分享邀請碼領取寶石獎勵，並在每日與每週邀請排行榜上競爭名次。" },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mark1217.lovable.app/invite" },
+    ],
+    links: [{ rel: "canonical", href: "https://mark1217.lovable.app/invite" }],
+  }),
 });
 
 type Range = "day" | "week" | "month" | "all";

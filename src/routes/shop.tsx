@@ -21,7 +21,17 @@ import {
 
 export const Route = createFileRoute("/shop")({
   component: Shop,
-  head: () => ({ meta: [{ title: "頭像商店 — 用金幣解鎖角色" }] }),
+  head: () => ({
+    meta: [
+      { title: "商店 — 用金幣與寶石解鎖頭像與 GIF 表情｜畫聊 Doodle" },
+      { name: "description", content: "在畫聊 Doodle 商店用遊戲中賺到的金幣解鎖稀有頭像，或用寶石購買 GIF 表情包與加成道具，在對戰時展現個人風格。" },
+      { property: "og:title", content: "商店 — 解鎖頭像、GIF 表情與加成道具" },
+      { property: "og:description", content: "用金幣解鎖稀有頭像，用寶石購買 GIF 表情包與加成道具，讓你的對戰更有個性。" },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mark1217.lovable.app/shop" },
+    ],
+    links: [{ rel: "canonical", href: "https://mark1217.lovable.app/shop" }],
+  }),
 });
 
 const RARITY_STYLE: Record<string, string> = {

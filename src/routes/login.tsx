@@ -14,7 +14,18 @@ const loginSearchSchema = z.object({ ref: z.string().optional() });
 export const Route = createFileRoute("/login")({
   component: LoginPage,
   validateSearch: loginSearchSchema,
-  head: () => ({ meta: [{ title: "登入 · 畫聊" }] }),
+  head: () => ({
+    meta: [
+      { title: "登入／註冊 — 畫聊 Doodle 多人遊戲平台" },
+      { name: "description", content: "登入或註冊畫聊 Doodle，保存你的頭像、金幣與寶石，加好友、參加邀請活動，並在多人繪圖猜題與桌遊房間中累積戰績。" },
+      { property: "og:title", content: "登入／註冊 — 畫聊 Doodle" },
+      { property: "og:description", content: "註冊帳號保存頭像、金幣與好友清單，解鎖邀請獎勵與完整多人遊戲功能。" },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mark1217.lovable.app/login" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://mark1217.lovable.app/login" }],
+  }),
 });
 
 function LoginPage() {
