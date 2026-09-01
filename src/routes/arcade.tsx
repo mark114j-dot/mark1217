@@ -11,7 +11,30 @@ import { aiPickMove } from "@/lib/aiOpponent.functions";
 
 export const Route = createFileRoute("/arcade")({
   component: Arcade,
-  head: () => ({ meta: [{ title: "單人街機 — 10 款 AI 對戰/挑戰遊戲" }] }),
+  head: () => ({
+    meta: [
+      { title: "單人街機 — 10 款 AI 對戰與反應挑戰遊戲｜畫聊 Doodle" },
+      { name: "description", content: "免安裝單人街機：貪食蛇、2048、打地鼠、Simon、心算閃電與 AI 井字棋等 10 款遊戲，隨開隨玩還能賺取金幣。" },
+      { property: "og:title", content: "單人街機 — 10 款 AI 對戰與反應挑戰遊戲" },
+      { property: "og:description", content: "貪食蛇、2048、打地鼠、心算閃電與 AI 井字棋等 10 款單人小遊戲，開瀏覽器就能玩並賺取金幣。" },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mark1217.lovable.app/arcade" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [{ rel: "canonical", href: "https://mark1217.lovable.app/arcade" }],
+    scripts: [{
+      type: "application/ld+json",
+      children: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: "畫聊 Doodle 單人街機",
+        applicationCategory: "GameApplication",
+        operatingSystem: "Web",
+        url: "https://mark1217.lovable.app/arcade",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "TWD" },
+      }),
+    }],
+  }),
 });
 
 type GameDef = { id: string; name: string; emoji: string; desc: string; color: string };
@@ -46,7 +69,7 @@ function Arcade() {
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
+          <Link to="/" aria-label="回到首頁" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h1 className="font-display text-3xl sm:text-4xl font-black">🕹️ 單人街機</h1>

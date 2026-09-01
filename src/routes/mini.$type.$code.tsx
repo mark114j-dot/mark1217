@@ -12,6 +12,18 @@ import { EmoteBar } from "@/components/EmoteBar";
 
 export const Route = createFileRoute("/mini/$type/$code")({
   component: MiniRoomPage,
+  head: ({ params }) => ({
+    meta: [
+      { title: `${params.type} 連線房間 ${params.code} — 畫聊 Doodle 多人小遊戲` },
+      { name: "description", content: `和朋友在畫聊 Doodle 的 ${params.type} 房間 ${params.code} 即時對戰，分享房號就能加入，免安裝、免下載，手機與電腦都能同步遊玩。` },
+      { property: "og:title", content: `${params.type} 連線房間 ${params.code}` },
+      { property: "og:description", content: `分享房號 ${params.code}，和朋友在 ${params.type} 中即時連線對戰。` },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: `${"https://mark1217.lovable.app"}/mini/${params.type}/${params.code}` },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: `${"https://mark1217.lovable.app"}/mini/${params.type}/${params.code}` }],
+  }),
 });
 
 function MiniRoomPage() {
@@ -61,7 +73,7 @@ function MiniRoomPage() {
     <div className="min-h-screen bg-background p-3 sm:p-5">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Link to="/games" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
+          <Link to="/games" aria-label="回到遊戲大廳" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <h1 className="font-display font-black text-xl flex items-center gap-2">

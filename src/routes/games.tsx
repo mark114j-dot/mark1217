@@ -20,7 +20,9 @@ export const Route = createFileRoute("/games")({
       { property: "og:description", content: "瀏覽工作室發布的線上遊戲，依熱門、最新與分類挑選，點開圖示立即開始遊玩。" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "https://mark1217.lovable.app/games" },
     ],
+    links: [{ rel: "canonical", href: "https://mark1217.lovable.app/games" }],
   }),
 });
 
