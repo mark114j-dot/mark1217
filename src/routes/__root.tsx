@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
 import { MusicProvider } from "@/lib/music";
 import { registerPwa } from "@/lib/pwa";
+import { precacheOfflineGames } from "@/lib/offlineCache";
 
 
 function NotFoundComponent() {
