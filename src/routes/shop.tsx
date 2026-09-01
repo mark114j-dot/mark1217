@@ -53,9 +53,7 @@ function Shop() {
   async function refresh() {
     const w = await getWallet();
     setCoins(w.coins);
-    // fetch gems separately (getWallet only returns coins)
-    const { data: wRow } = await supabase.from("wallets").select("gems").eq("client_id", getClientId()).maybeSingle();
-    setGems(wRow?.gems ?? 0);
+    setGems(w.gems);
     setOwned(await getOwned());
     setSkus(await getOwnedSkus());
     // shop gifs (public read)

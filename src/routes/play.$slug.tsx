@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { recordPlay } from "@/lib/plays.functions";
 import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
 import { getClientId } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
@@ -99,7 +100,7 @@ function PlayGame() {
       }
       if (row) {
         setGame(row as any);
-        supabase.rpc("increment_game_play" as any, { _slug: slug }).then(() => {}, () => {});
+        recordPlay({ data: { slug } }).catch(() => {});
       } else {
         setErr(message ?? "找不到這款遊戲");
       }
@@ -176,7 +177,7 @@ function PlayGame() {
       gif_url: e.shop_emotes.gif_url,
       display_mode: e.shop_emotes.display_mode,
       sender_id: user.id,
-      sender_name: user.user_metadata?.username ?? user.email ?? null,
+      sender_name: (user.user_metadata?.username as string | undefined) ?? null,
     });
   }
 

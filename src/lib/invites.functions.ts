@@ -4,7 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getMyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("profiles").select("invite_code,username,avatar").eq("id", context.userId).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) throw new Error("找不到個人資料");
@@ -23,7 +24,8 @@ export const claimInvite = createServerFn({ method: "POST" })
     const { data: exist } = await context.supabase
       .from("invite_claims").select("id").eq("invited_id", context.userId).maybeSingle();
     if (exist) return { ok: false, reason: "已領取過邀請獎勵" };
-    const { data: ref, error: eRef } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ref, error: eRef } = await supabaseAdmin
       .from("profiles").select("id").eq("invite_code", code).maybeSingle();
     if (eRef) throw new Error(eRef.message);
     if (!ref) return { ok: false, reason: "邀請碼不存在" };
@@ -33,7 +35,7 @@ export const claimInvite = createServerFn({ method: "POST" })
     if (eIns) throw new Error(eIns.message);
     // Reward inviter (via referrer's wallet client_id from any profile linkage; skip if unknown) and invitee.
     if (data.clientId) {
-      await context.supabase.rpc("add_gems", { _client_id: data.clientId, _amount: 10 });
+      await supabaseAdmin.rpc("add_gems", { _client_id: data.clientId, _amount: 10 });
     }
     // Look up referrer's most recent wallet by matching profile updates — best-effort:
     // We store profiles.id, but wallets uses anonymous client_id. Skip inviter reward here;
@@ -56,7 +58,8 @@ export const claimInviterRewards = createServerFn({ method: "POST" })
     // Zero out reward_gems for those rows to mark as granted
     const ids = rows.map((r: any) => r.id);
     await context.supabase.from("invite_claims").update({ reward_gems: 0 }).in("id", ids);
-    await context.supabase.rpc("add_gems", { _client_id: data.clientId, _amount: total });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.rpc("add_gems", { _client_id: data.clientId, _amount: total });
     return { granted: total };
   });
 

@@ -1,80 +1,45 @@
-import { supabase } from "@/integrations/supabase/client";
 import { getClientId } from "@/lib/game";
-import { hasBooster } from "@/lib/items";
+import { SHOP_AVATARS, FREE_AVATARS, type ShopAvatar } from "@/lib/catalog";
+import { walletState, awardCoins as awardCoinsFn, buySku } from "@/lib/wallet.functions";
 
-export type ShopAvatar = { emoji: string; price: number; rarity: "common" | "rare" | "epic" | "legendary" };
+export { SHOP_AVATARS, FREE_AVATARS };
+export type { ShopAvatar };
 
-export const SHOP_AVATARS: ShopAvatar[] = [
-  { emoji: "🦊", price: 50, rarity: "common" },
-  { emoji: "🐼", price: 50, rarity: "common" },
-  { emoji: "🦁", price: 80, rarity: "common" },
-  { emoji: "🐲", price: 150, rarity: "rare" },
-  { emoji: "🦄", price: 200, rarity: "rare" },
-  { emoji: "🦖", price: 200, rarity: "rare" },
-  { emoji: "🧙", price: 300, rarity: "epic" },
-  { emoji: "🦸", price: 300, rarity: "epic" },
-  { emoji: "🥷", price: 300, rarity: "epic" },
-  { emoji: "🧛", price: 400, rarity: "epic" },
-  { emoji: "👽", price: 500, rarity: "epic" },
-  { emoji: "🤖", price: 500, rarity: "epic" },
-  { emoji: "👻", price: 600, rarity: "legendary" },
-  { emoji: "🎃", price: 600, rarity: "legendary" },
-  { emoji: "🐉", price: 800, rarity: "legendary" },
-  { emoji: "👑", price: 1000, rarity: "legendary" },
-  { emoji: "💎", price: 1200, rarity: "legendary" },
-  { emoji: "🔥", price: 1500, rarity: "legendary" },
-];
-
-export const FREE_AVATARS = ["🐱", "🐶", "🐸", "🐵", "🐧"];
-
-export async function getWallet(): Promise<{ coins: number }> {
+/** Coins + gems for this browser (server-authoritative). */
+export async function getWallet(): Promise<{ coins: number; gems: number }> {
   const id = getClientId();
-  if (!id) return { coins: 0 };
-  const { data } = await supabase.from("wallets").select("coins").eq("client_id", id).maybeSingle();
-  if (!data) {
-    await supabase.from("wallets").insert({ client_id: id, coins: 100 });
-    return { coins: 100 };
-  }
-  return { coins: data.coins };
+  if (!id) return { coins: 0, gems: 0 };
+  const w = await walletState({ data: { clientId: id } });
+  return { coins: w.coins, gems: w.gems };
+}
+
+export async function getGems(): Promise<number> {
+  return (await getWallet()).gems;
 }
 
 export async function addCoins(delta: number) {
   const id = getClientId();
   if (!id) return 0;
-  const { coins } = await getWallet();
-  const next = Math.max(0, coins + delta);
-  await supabase.from("wallets").update({ coins: next }).eq("client_id", id);
-  return next;
+  const { coins } = await awardCoinsFn({ data: { clientId: id, delta } });
+  return coins;
 }
 
-/** Apply the permanent 2x doubler if owned, then credit coins. */
+/** Credit coins; the permanent 2x doubler is applied server-side when owned. */
 export async function awardCoins(delta: number): Promise<{ coins: number; doubled: boolean; gained: number }> {
-  const doubled = delta > 0 && (await hasBooster("boost:doubler"));
-  const gained = doubled ? delta * 2 : delta;
-  const coins = await addCoins(gained);
-  return { coins, doubled, gained };
+  const id = getClientId();
+  if (!id) return { coins: 0, doubled: false, gained: 0 };
+  return await awardCoinsFn({ data: { clientId: id, delta } });
 }
 
 export async function getOwned(): Promise<string[]> {
   const id = getClientId();
   if (!id) return FREE_AVATARS;
-  const { data } = await supabase.from("owned_avatars").select("avatar").eq("client_id", id);
-  return [...FREE_AVATARS, ...(data ?? []).map((r) => r.avatar)];
+  const w = await walletState({ data: { clientId: id } });
+  return [...FREE_AVATARS, ...w.skus];
 }
 
 export async function buyAvatar(emoji: string): Promise<{ ok: boolean; reason?: string; coins?: number }> {
-  const item = SHOP_AVATARS.find((a) => a.emoji === emoji);
-  if (!item) return { ok: false, reason: "找不到此頭像" };
   const id = getClientId();
   if (!id) return { ok: false, reason: "尚未初始化" };
-  const owned = await getOwned();
-  if (owned.includes(emoji)) return { ok: false, reason: "已擁有" };
-  const { coins } = await getWallet();
-  if (coins < item.price) return { ok: false, reason: "金幣不足" };
-  const next = coins - item.price;
-  const { error: upErr } = await supabase.from("wallets").update({ coins: next }).eq("client_id", id);
-  if (upErr) return { ok: false, reason: upErr.message };
-  const { error: insErr } = await supabase.from("owned_avatars").insert({ client_id: id, avatar: emoji });
-  if (insErr) return { ok: false, reason: insErr.message };
-  return { ok: true, coins: next };
+  return await buySku({ data: { clientId: id, sku: emoji } });
 }

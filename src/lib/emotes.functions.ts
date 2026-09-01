@@ -78,7 +78,8 @@ export const buyEmote = createServerFn({ method: "POST" })
     if (owned) throw new Error("已擁有此表情");
     // Spend gems via SECURITY DEFINER rpc, keyed on the anonymous wallet client_id
     if (emote.gem_price > 0) {
-      const { error: eSpend } = await context.supabase.rpc("spend_gems", {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: eSpend } = await supabaseAdmin.rpc("spend_gems", {
         _client_id: data.clientId, _amount: emote.gem_price,
       });
       if (eSpend) throw new Error(eSpend.message);
@@ -97,7 +98,8 @@ export const adminAddGems = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await ensureAdmin(context);
     const amt = Math.max(1, Math.floor(data.amount));
-    const { data: gems, error } = await context.supabase.rpc("add_gems", {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: gems, error } = await supabaseAdmin.rpc("add_gems", {
       _client_id: data.clientId, _amount: amt,
     });
     if (error) throw new Error(error.message);
