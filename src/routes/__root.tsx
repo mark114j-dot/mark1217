@@ -135,6 +135,15 @@ function RootComponent() {
 
   useEffect(() => {
     registerPwa();
+    const t = window.setTimeout(() => {
+      void precacheOfflineGames();
+    }, 2500);
+    const onOnline = () => void precacheOfflineGames();
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("online", onOnline);
+    };
   }, []);
 
   return (
