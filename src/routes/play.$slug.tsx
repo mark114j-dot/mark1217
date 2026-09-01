@@ -176,7 +176,7 @@ function PlayGame() {
       gif_url: e.shop_emotes.gif_url,
       display_mode: e.shop_emotes.display_mode,
       sender_id: user.id,
-      sender_name: user.user_metadata?.username ?? user.email ?? null,
+      sender_name: (user.user_metadata?.username as string | undefined) ?? null,
     });
   }
 
