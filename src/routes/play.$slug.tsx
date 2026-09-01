@@ -5,6 +5,7 @@ import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
 import { getClientId } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
 import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
+import { readCachedOfflineGame } from "@/lib/offlineCache";
 
 export const Route = createFileRoute("/play/$slug")({
   component: PlayGame,
@@ -79,15 +80,28 @@ function PlayGame() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("games")
-        .select("id,slug,name,emoji,description,html_content,play_url,cover_image_url,instructions,offline_ok")
-        .eq("slug", slug).eq("status", "published").maybeSingle();
-      if (error) setErr(error.message);
-      else if (!data) setErr("找不到這款遊戲");
-      else {
-        setGame(data as any);
+      let row: any = null;
+      let message: string | null = null;
+      try {
+        const { data, error } = await supabase
+          .from("games")
+          .select("id,slug,name,emoji,description,html_content,play_url,cover_image_url,instructions,offline_ok")
+          .eq("slug", slug).eq("status", "published").maybeSingle();
+        if (error) message = error.message;
+        row = data;
+      } catch (e: any) {
+        message = e?.message ?? "連線失敗";
+      }
+      if (!row) {
+        // Offline: serve the pre-cached copy if we have one.
+        row = await readCachedOfflineGame(slug);
+        if (row) message = null;
+      }
+      if (row) {
+        setGame(row as any);
         supabase.rpc("increment_game_play" as any, { _slug: slug }).then(() => {}, () => {});
+      } else {
+        setErr(message ?? "找不到這款遊戲");
       }
       setLoading(false);
     })();

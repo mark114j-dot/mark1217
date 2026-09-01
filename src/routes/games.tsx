@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, deleteGame } from "@/lib/studio.functions";
 import { useAuth } from "@/lib/auth";
+import { readCachedOfflineGames } from "@/lib/offlineCache";
 
 export const Route = createFileRoute("/games")({
   component: GamesHub,
@@ -78,12 +79,23 @@ function GamesHub() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("games")
-        .select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url,offline_ok")
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
-      setGames(((data ?? []) as any[]).filter((g) => g.html_content || g.play_url) as PubGame[]);
+      let rows: any[] = [];
+      try {
+        const { data } = await supabase
+          .from("games")
+          .select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url,offline_ok")
+          .eq("status", "published")
+          .order("created_at", { ascending: false });
+        rows = (data ?? []) as any[];
+      } catch {
+        rows = [];
+      }
+      if (rows.length === 0) {
+        // No network: fall back to the pre-cached offline-ready games.
+        rows = await readCachedOfflineGames();
+        if (rows.length > 0) setOnlyOffline(true);
+      }
+      setGames(rows.filter((g) => g.html_content || g.play_url) as PubGame[]);
       setLoading(false);
     })();
   }, []);
