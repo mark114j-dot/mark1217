@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAdmin, deleteGame } from "@/lib/studio.functions";
 import { useAuth } from "@/lib/auth";
+import { readCachedOfflineGames } from "@/lib/offlineCache";
 
 export const Route = createFileRoute("/games")({
   component: GamesHub,
