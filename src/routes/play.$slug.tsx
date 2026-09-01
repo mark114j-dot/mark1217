@@ -5,6 +5,7 @@ import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
 import { getClientId } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
 import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
+import { readCachedOfflineGame } from "@/lib/offlineCache";
 
 export const Route = createFileRoute("/play/$slug")({
   component: PlayGame,
