@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mark1217.lovable.app/sitemap.xml
