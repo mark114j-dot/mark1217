@@ -80,6 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "google-site-verification", content: "u93TDIJ0Fky7-_USm_pgoCWXCG0D_ZdfzIZhZIJjLoA" },
       { title: "畫畫" },
       { name: "description", content: "Playful Realms is a multiplayer online game platform offering a variety of connected gaming experiences." },
       { name: "author", content: "Lovable" },

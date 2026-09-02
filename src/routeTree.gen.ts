@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InviteRouteImport } from './routes/invite'
@@ -26,6 +27,11 @@ import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/emotes': typeof AdminEmotesRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/emotes': typeof AdminEmotesRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/shop': typeof ShopRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/emotes': typeof AdminEmotesRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/shop'
+    | '/sitemap.xml'
     | '/studio'
     | '/admin/announcements'
     | '/admin/emotes'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/shop'
+    | '/sitemap.xml'
     | '/studio'
     | '/admin/announcements'
     | '/admin/emotes'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/shop'
+    | '/sitemap.xml'
     | '/studio'
     | '/admin/announcements'
     | '/admin/emotes'
@@ -191,6 +203,7 @@ export interface RootRouteChildren {
   InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   ShopRoute: typeof ShopRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StudioRoute: typeof StudioRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminEmotesRoute: typeof AdminEmotesRoute
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -303,6 +323,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   ShopRoute: ShopRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StudioRoute: StudioRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminEmotesRoute: AdminEmotesRoute,
