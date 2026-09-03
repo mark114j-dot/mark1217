@@ -29,26 +29,35 @@ export type StudioDraftSpec = {
   extras?: Record<string, unknown>;
   html_content?: string;
   play_url?: string;
-  cover_image_url?: string;
   instructions?: string;
   offline_ok?: boolean;
   generated_at?: string;
 };
 
-async function ensureAdmin(ctx: { supabase: any; userId: string }) {
+async function isAdmin(ctx: { supabase: any; userId: string }) {
   const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("需要管理員權限");
+  return !!data;
+}
+
+async function requireOwnerOrAdmin(ctx: { supabase: any; userId: string }, ownerId?: string | null) {
+  if (await isAdmin(ctx)) return;
+  if (ownerId && ownerId === ctx.userId) return;
+  throw new Error("需要擁有者或管理員權限");
 }
 
 export const listSessions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await ensureAdmin(context);
-    const { data, error } = await context.supabase
+    const admin = await isAdmin(context);
+    let query = context.supabase
       .from("studio_sessions")
-      .select("id,title,folder,progress,game_id,updated_at,created_at,draft_spec")
+      .select("id,title,folder,progress,game_id,owner_id,updated_at,created_at,draft_spec")
       .order("updated_at", { ascending: false });
+    if (!admin) {
+      query = query.or(`owner_id.eq.${context.userId},folder.eq.published`);
+    }
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -57,9 +66,11 @@ export const getSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
     const { data: row, error } = await context.supabase
-      .from("studio_sessions").select("*").eq("id", data.id).single();
+      .from("studio_sessions")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (error) throw new Error(error.message);
     return row;
   });
@@ -68,7 +79,6 @@ export const createSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { title?: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
     const { data: row, error } = await context.supabase
       .from("studio_sessions")
       .insert({
@@ -79,7 +89,8 @@ export const createSession = createServerFn({ method: "POST" })
         draft_spec: {},
         progress: 0,
       })
-      .select().single();
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return row;
   });
@@ -95,13 +106,24 @@ export const updateSession = createServerFn({ method: "POST" })
     progress?: number;
   }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
+    const { data: existing, error: e1 } = await context.supabase
+      .from("studio_sessions")
+      .select("owner_id")
+      .eq("id", data.id)
+      .single();
+    if (e1) throw new Error(e1.message);
+    await requireOwnerOrAdmin(context, existing.owner_id);
+
     const patch: any = {};
     for (const k of ["title", "folder", "messages", "draft_spec", "progress"] as const) {
       if (data[k] !== undefined) patch[k] = data[k];
     }
     const { data: row, error } = await context.supabase
-      .from("studio_sessions").update(patch).eq("id", data.id).select().single();
+      .from("studio_sessions")
+      .update(patch)
+      .eq("id", data.id)
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return row;
   });
@@ -110,18 +132,32 @@ export const deleteSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
+    const { data: existing, error: e1 } = await context.supabase
+      .from("studio_sessions")
+      .select("owner_id")
+      .eq("id", data.id)
+      .single();
+    if (e1) throw new Error(e1.message);
+    await requireOwnerOrAdmin(context, existing.owner_id);
+
     const { error } = await context.supabase.from("studio_sessions").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-// Delete a published/draft game (admin only). Cleans up related game_versions.
+// Delete a published/draft game (owner or admin only). Cleans up related game_versions.
 export const deleteGame = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
+    const { data: g, error: e1 } = await context.supabase
+      .from("games")
+      .select("created_by")
+      .eq("id", data.id)
+      .single();
+    if (e1) throw new Error(e1.message);
+    await requireOwnerOrAdmin(context, g.created_by);
+
     await context.supabase.from("game_versions").delete().eq("game_id", data.id);
     await context.supabase.from("studio_sessions").update({ game_id: null }).eq("game_id", data.id);
     const { error } = await context.supabase.from("games").delete().eq("id", data.id);
@@ -133,10 +169,18 @@ export const duplicateSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
     const { data: src, error: e1 } = await context.supabase
-      .from("studio_sessions").select("*").eq("id", data.id).single();
+      .from("studio_sessions")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (e1) throw new Error(e1.message);
+
+    const admin = await isAdmin(context);
+    if (!admin && src.owner_id !== context.userId && src.folder !== "published") {
+      throw new Error("只能複製公開專案或自己的專案");
+    }
+
     const { data: row, error } = await context.supabase
       .from("studio_sessions")
       .insert({
@@ -147,7 +191,8 @@ export const duplicateSession = createServerFn({ method: "POST" })
         draft_spec: src.draft_spec,
         progress: src.progress,
       })
-      .select().single();
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return row;
   });
@@ -181,9 +226,6 @@ function normalizeHtml(input: string) {
   if (!/<html[\s>]/i.test(html)) {
     html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Game</title></head><body>${html}</body></html>`;
   }
-  // Inject strict CSP so uploaded/AI HTML cannot phone home, load remote scripts, or frame anything.
-  // sandbox on the iframe (allow-scripts only, no allow-same-origin) already isolates it from the parent origin;
-  // CSP is defense-in-depth against data exfiltration via fetch/img/beacon.
   const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors *;">`;
   const referrer = `<meta name="referrer" content="no-referrer">`;
   if (/<head[\s>]/i.test(html)) {
@@ -201,10 +243,14 @@ export const publishSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
     const { data: s, error: e1 } = await context.supabase
-      .from("studio_sessions").select("*").eq("id", data.id).single();
+      .from("studio_sessions")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (e1) throw new Error(e1.message);
+    await requireOwnerOrAdmin(context, s.owner_id);
+
     const spec = (s.draft_spec ?? {}) as StudioDraftSpec;
     if (!spec.name) throw new Error("尚未完成基本設定：缺少遊戲名稱");
     if (!spec.html_content && !spec.play_url) {
@@ -213,6 +259,14 @@ export const publishSession = createServerFn({ method: "POST" })
 
     let gameId = s.game_id;
     if (gameId) {
+      const { data: g, error: eg1 } = await context.supabase
+        .from("games")
+        .select("created_by")
+        .eq("id", gameId)
+        .single();
+      if (eg1) throw new Error(eg1.message);
+      await requireOwnerOrAdmin(context, g.created_by);
+
       const { error: eu } = await context.supabase
         .from("games").update({
           name: spec.name, emoji: spec.emoji ?? "🎮",
@@ -266,21 +320,21 @@ export const publishSession = createServerFn({ method: "POST" })
   });
 
 const SYSTEM_PROMPT = [
-  "你是「AI 遊戲工作室」的資深遊戲企劃助手，正在協助管理員設計一款新的線上遊戲。",
+  "你是「AI 遊戲工作室」的資深遊戲企劃助手，正在協助遊戲創作者設計一款新的線上遊戲。",
   "",
   "行為準則：",
-  "1. 用繁體中文回答，語氣專業、簡潔、有耐心。",
+  "1. 用繁體中文回答，語氣語氣專業、簡潔、有耐心。",
   "2. 絕對不要在需求不清楚時亂猜。缺什麼資訊，就一個一個問清楚。",
   "3. 每次回覆都要先「整理目前已知」，再列出「還需要確認的問題」（最多 5 條）。",
-  "4. 收到足夠資訊後，主動提出遊戲規格建議，讓管理員選「套用」或「重新思考」。",
-  "5. 不能自行發布、不能刪除遊戲、不能修改玩家資料、不能改排行榜或商城。所有正式變更由管理員按鈕觸發。",
+  "4. 收到足夠資訊後，主動提出遊戲規格建議，讓創作者選「套用」或「重新思考」。",
+  "5. 不能自行發布、不能刪除遊戲、不能修改玩家資料、不能改排行榜或商城。所有正式變更由創作者按按鈕觸發。",
   "6. 修改階段時，只調整相關內容，不要整個重做。",
   "",
   "輸出必須是合法 JSON，除此之外不要有任何文字：",
   '{"reply":"...","spec_updates":{},"questions":[],"suggestions":[],"progress":0,"ready_to_build":false,"ready_to_publish":false}',
   "",
   "draft_spec 可用欄位：name, emoji, category, primitive, description, min_players, max_players, needs_ai, needs_matchmaking, needs_leaderboard, needs_timer, timer_seconds, win_condition, lose_condition, rules[], ui[], levels, extras{}, play_url, cover_image_url, instructions。",
-  "如果管理員要求『生成可玩的遊戲』，先整理規格並提醒可按右側『AI 產生可玩程式』。不要只產生版面，也不要假裝已發布。",
+  "如果創作者要求『生成可玩的遊戲』，先整理規格並提醒可按右側『AI 產生可玩程式』。不要只產生版面，也不要假裝已發布。",
 ].join("\n");
 
 export const studioChat = createServerFn({ method: "POST" })
@@ -293,12 +347,19 @@ export const studioChat = createServerFn({ method: "POST" })
     history: { role: "user" | "assistant"; content: string }[];
   }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
+    const { data: s, error: e1 } = await context.supabase
+      .from("studio_sessions")
+      .select("owner_id")
+      .eq("id", data.sessionId)
+      .single();
+    if (e1) throw new Error(e1.message);
+    await requireOwnerOrAdmin(context, s.owner_id);
+
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY 未設定");
 
     const userContent: any[] = [
-      { type: "text", text: `目前 draft_spec:\n${JSON.stringify(data.currentSpec, null, 2)}\n\n管理員：${data.userMessage}` },
+      { type: "text", text: `目前 draft_spec:\n${JSON.stringify(data.currentSpec, null, 2)}\n\n創作者：${data.userMessage}` },
     ];
     if (data.images?.length) {
       for (const url of data.images.slice(0, 4)) {
@@ -344,10 +405,13 @@ export const generatePlayableGame = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string; extraPrompt?: string }) => d)
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
     const { data: session, error } = await context.supabase
-      .from("studio_sessions").select("*").eq("id", data.id).single();
+      .from("studio_sessions")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (error) throw new Error(error.message);
+    await requireOwnerOrAdmin(context, session.owner_id);
 
     const spec = (session.draft_spec ?? {}) as StudioDraftSpec;
     if (!spec.name && !spec.description) throw new Error("請先用聊天描述遊戲名稱或玩法，再產生可玩程式");
@@ -355,7 +419,7 @@ export const generatePlayableGame = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY 未設定");
     const history = ((session.messages ?? []) as StudioMessage[]).slice(-12)
-      .map((m) => `${m.role === "user" ? "管理員" : "AI"}：${m.content}`).join("\n");
+      .map((m) => `${m.role === "user" ? "創作者" : "AI"}：${m.content}`).join("\n");
 
     const prompt = [
       "你是資深 2D Web 遊戲工程師。請根據規格產出一個真正可玩的單檔 HTML 遊戲，不是示意版面。",
