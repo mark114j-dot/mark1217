@@ -91,7 +91,10 @@ function StudioWorkspace({ userId, isAdmin }: { userId: string; isAdmin: boolean
   const [iconUploading, setIconUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [folderFilter, setFolderFilter] = useState<"all" | "draft" | "published" | "archived">("all");
+  const [scopeFilter, setScopeFilter] = useState<"mine" | "community" | "all">("mine");
+  const [activeOwner, setActiveOwner] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
