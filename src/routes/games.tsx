@@ -79,28 +79,66 @@ function GamesHub() {
     checkFn().then((r: any) => setIsAdmin(!!r.isAdmin)).catch(() => setIsAdmin(false));
   }, [user]);
 
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [cacheInfo, setCacheInfo] = useState<{ savedAt: number; count: number }>({ savedAt: 0, count: 0 });
+  const [caching, setCaching] = useState(false);
+
   useEffect(() => {
     (async () => {
+      const online = typeof navigator === "undefined" ? true : navigator.onLine;
       let rows: any[] = [];
-      try {
-        const { data } = await supabase
-          .from("games")
-          .select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url,offline_ok")
-          .eq("status", "published")
-          .order("created_at", { ascending: false });
-        rows = (data ?? []) as any[];
-      } catch {
-        rows = [];
-      }
-      if (rows.length === 0) {
-        // No network: fall back to the pre-cached offline-ready games.
+
+      if (!online) {
+        // Truly offline: go straight to the local copy, no network wait.
         rows = await readCachedOfflineGames();
-        if (rows.length > 0) setOnlyOffline(true);
+        setOfflineMode(true);
+        setOnlyOffline(true);
+      } else {
+        try {
+          const { data } = await supabase
+            .from("games")
+            .select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url,offline_ok")
+            .eq("status", "published")
+            .order("created_at", { ascending: false });
+          rows = (data ?? []) as any[];
+        } catch {
+          rows = [];
+        }
+        if (rows.length === 0) {
+          rows = await readCachedOfflineGames();
+          if (rows.length > 0) { setOfflineMode(true); setOnlyOffline(true); }
+        }
       }
       setGames(rows.filter((g) => g.html_content || g.play_url) as PubGame[]);
       setLoading(false);
+      setCacheInfo(await getOfflineMeta());
     })();
   }, []);
+
+  useEffect(() => {
+    const on = () => setOfflineMode(false);
+    const off = () => setOfflineMode(true);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+
+  async function downloadOffline() {
+    setCaching(true);
+    try {
+      const n = await precacheOfflineGames();
+      setCacheInfo(await getOfflineMeta());
+      toast.success(n > 0 ? `已下載 ${n} 款免連線遊戲，斷網也能玩` : "目前沒有可離線下載的遊戲");
+    } catch {
+      toast.error("離線下載失敗，請稍後再試");
+    } finally {
+      setCaching(false);
+    }
+  }
+
 
   async function handleDelete(g: PubGame) {
     if (!confirm(`${T("confirm_delete")}\n\n「${g.name}」`)) return;
