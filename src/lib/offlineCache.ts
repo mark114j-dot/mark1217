@@ -78,7 +78,7 @@ export async function precacheOfflineGames(): Promise<number> {
     );
 
     // Warm the app shell for the routes those games need.
-    const routes = ["/", "/games", ...prepared.map((g) => `/play/${g.slug}`)];
+    const routes = ["/", "/games", "/arcade", ...prepared.map((g) => `/play/${g.slug}`)];
     await Promise.allSettled(
       routes.map(async (r) => {
         try {
@@ -103,23 +103,38 @@ export async function precacheOfflineGames(): Promise<number> {
           }
         }),
     );
+
+    window.dispatchEvent(new CustomEvent("offline-cache-updated", { detail: prepared.length }));
+    return prepared.length;
   } catch {
     /* offline pre-caching is best-effort */
+    return 0;
   }
 }
 
-export async function readCachedOfflineGames(): Promise<CachedGame[]> {
-  if (!cachesAvailable()) return [];
+async function readIndex(): Promise<{ savedAt: number; games: CachedGame[] } | null> {
+  if (!cachesAvailable()) return null;
   try {
     const cache = await caches.open(CACHE_NAME);
     const res = await cache.match(INDEX_KEY);
-    if (!res) return [];
-    const json = (await res.json()) as { games?: CachedGame[] };
-    return json.games ?? [];
+    if (!res) return null;
+    const json = (await res.json()) as { savedAt?: number; games?: CachedGame[] };
+    return { savedAt: json.savedAt ?? 0, games: json.games ?? [] };
   } catch {
-    return [];
+    return null;
   }
 }
+
+/** How many offline games are stored locally and when they were saved. */
+export async function getOfflineMeta(): Promise<{ savedAt: number; count: number }> {
+  const idx = await readIndex();
+  return { savedAt: idx?.savedAt ?? 0, count: idx?.games.length ?? 0 };
+}
+
+export async function readCachedOfflineGames(): Promise<CachedGame[]> {
+  return (await readIndex())?.games ?? [];
+}
+
 
 export async function readCachedOfflineGame(slug: string): Promise<CachedGame | null> {
   const games = await readCachedOfflineGames();
