@@ -31,13 +31,14 @@ type Session = {
   folder: string;
   progress: number;
   game_id: string | null;
+  owner_id: string;
   updated_at: string;
   draft_spec: StudioDraftSpec;
 };
 
 function StudioPage() {
   const { user, loading: authLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const checkFn = useServerFn(checkAdmin);
   useEffect(() => {
@@ -46,27 +47,33 @@ function StudioPage() {
     checkFn().then((r) => setIsAdmin(r.isAdmin)).catch(() => setIsAdmin(false));
   }, [user, authLoading]);
 
-  if (authLoading || isAdmin === null) {
+  if (authLoading) {
     return <main className="min-h-screen grid place-items-center bg-background">
       <div className="font-display text-xl">讀取中…</div>
     </main>;
   }
-  if (!user || !isAdmin) {
+  if (!user) {
     return (
       <main className="min-h-screen grid place-items-center bg-background p-6">
         <div className="border-brutal shadow-brutal rounded-2xl bg-card p-8 max-w-md text-center">
           <div className="text-5xl mb-3">🛠️</div>
           <h1 className="font-display text-2xl font-bold mb-2">AI 遊戲工作室</h1>
-          <p className="text-muted-foreground mb-4">此區僅限管理員使用。</p>
-          <a href="/" className="inline-block border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-primary text-primary-foreground font-bold">回首頁</a>
+          <p className="text-muted-foreground mb-4">
+            登入後，每個人都能建立自己的遊戲專案，發布後會出現在遊戲大廳。
+          </p>
+          <div className="flex gap-2 justify-center">
+            <a href="/login" className="inline-block border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-primary text-primary-foreground font-bold">前往登入</a>
+            <a href="/" className="inline-block border-brutal rounded-xl px-4 py-2 bg-card font-bold">回首頁</a>
+          </div>
         </div>
       </main>
     );
   }
-  return <StudioWorkspace />;
+  return <StudioWorkspace userId={user.id} isAdmin={isAdmin} />;
 }
 
-function StudioWorkspace() {
+function StudioWorkspace({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
+
   const listFn = useServerFn(listSessions);
   const createFn = useServerFn(createSession);
   const getFn = useServerFn(getSession);
@@ -84,7 +91,10 @@ function StudioWorkspace() {
   const [iconUploading, setIconUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [folderFilter, setFolderFilter] = useState<"all" | "draft" | "published" | "archived">("all");
+  const [scopeFilter, setScopeFilter] = useState<"mine" | "community" | "all">("mine");
+  const [activeOwner, setActiveOwner] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
