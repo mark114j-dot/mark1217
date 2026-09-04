@@ -177,6 +177,26 @@ function GamesHub() {
           <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 遊戲大廳</h1>
         </div>
 
+        {/* Offline status / download */}
+        <div className={`mb-4 rounded-xl border-brutal px-3 py-2 text-xs flex flex-wrap items-center gap-2 ${offlineMode ? "bg-amber-50" : "bg-emerald-50"}`}>
+          <span className="font-bold">{offlineMode ? "📴 目前離線中" : "🟢 已連線"}</span>
+          <span className="text-foreground/70">
+            {cacheInfo.count > 0
+              ? `已下載 ${cacheInfo.count} 款免連線遊戲${cacheInfo.savedAt ? `（${new Date(cacheInfo.savedAt).toLocaleString()}）` : ""}，斷網也能直接玩。`
+              : "尚未下載離線遊戲，按右邊按鈕即可存到裝置。"}
+          </span>
+          <span className="flex-1" />
+          <button
+            onClick={downloadOffline}
+            disabled={caching || offlineMode}
+            className="border-brutal shadow-brutal-sm rounded-lg bg-card px-3 py-1 font-bold disabled:opacity-40"
+          >
+            {caching ? "下載中…" : "⬇ 下載離線遊戲"}
+          </button>
+        </div>
+
+
+
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-3">
           {([
