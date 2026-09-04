@@ -45,8 +45,8 @@ async function toDataUrl(url: string): Promise<string | null> {
 }
 
 /** Fetch every published offline-ok game and store it (HTML + inlined icon) for offline use. */
-export async function precacheOfflineGames(): Promise<void> {
-  if (!cachesAvailable() || !navigator.onLine) return;
+export async function precacheOfflineGames(): Promise<number> {
+  if (!cachesAvailable() || !navigator.onLine) return 0;
   try {
     const { data, error } = await supabase
       .from("games")
@@ -55,7 +55,8 @@ export async function precacheOfflineGames(): Promise<void> {
       )
       .eq("status", "published")
       .eq("offline_ok", true);
-    if (error || !data) return;
+    if (error || !data) return 0;
+
 
     const games = data as unknown as CachedGame[];
     const prepared: CachedGame[] = [];
