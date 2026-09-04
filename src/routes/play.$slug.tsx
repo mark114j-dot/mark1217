@@ -81,26 +81,34 @@ function PlayGame() {
 
   useEffect(() => {
     (async () => {
+      const online = typeof navigator === "undefined" ? true : navigator.onLine;
       let row: any = null;
       let message: string | null = null;
-      try {
-        const { data, error } = await supabase
-          .from("games")
-          .select("id,slug,name,emoji,description,html_content,play_url,cover_image_url,instructions,offline_ok")
-          .eq("slug", slug).eq("status", "published").maybeSingle();
-        if (error) message = error.message;
-        row = data;
-      } catch (e: any) {
-        message = e?.message ?? "連線失敗";
-      }
-      if (!row) {
-        // Offline: serve the pre-cached copy if we have one.
+
+      if (!online) {
+        // Truly offline: read the local copy immediately, never touch the network.
         row = await readCachedOfflineGame(slug);
-        if (row) message = null;
+        if (!row) message = "目前離線中，這款遊戲尚未下載到裝置";
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from("games")
+            .select("id,slug,name,emoji,description,html_content,play_url,cover_image_url,instructions,offline_ok")
+            .eq("slug", slug).eq("status", "published").maybeSingle();
+          if (error) message = error.message;
+          row = data;
+        } catch (e: any) {
+          message = e?.message ?? "連線失敗";
+        }
+        if (!row) {
+          row = await readCachedOfflineGame(slug);
+          if (row) message = null;
+        }
       }
+
       if (row) {
         setGame(row as any);
-        recordPlay({ data: { slug } }).catch(() => {});
+        if (online) recordPlay({ data: { slug } }).catch(() => {});
       } else {
         setErr(message ?? "找不到這款遊戲");
       }
@@ -108,29 +116,40 @@ function PlayGame() {
     })();
   }, [slug]);
 
-  // Check for blocking announcements
+  // Check for blocking announcements (skipped entirely when offline)
   useEffect(() => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
     (async () => {
-      const { data } = await supabase
-        .from("announcements")
-        .select("id,kind,title,body,block_play,require_typing")
-        .eq("active", true).eq("block_play", true)
-        .order("created_at", { ascending: false }).limit(1);
-      if (data && data[0]) setBlockAnnouncement(data[0] as Announcement);
+      try {
+        const { data } = await supabase
+          .from("announcements")
+          .select("id,kind,title,body,block_play,require_typing")
+          .eq("active", true).eq("block_play", true)
+          .order("created_at", { ascending: false }).limit(1);
+        if (data && data[0]) setBlockAnnouncement(data[0] as Announcement);
+      } catch {
+        /* offline: never block play */
+      }
     })();
   }, []);
 
   // Load owned emotes for signed-in user
   useEffect(() => {
     if (!user) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
     (async () => {
-      const { data } = await supabase
-        .from("owned_emotes")
-        .select("emote_id, shop_emotes(id,name,gif_url,display_mode)")
-        .eq("user_id", user.id);
-      setOwned((data ?? []) as any);
+      try {
+        const { data } = await supabase
+          .from("owned_emotes")
+          .select("emote_id, shop_emotes(id,name,gif_url,display_mode)")
+          .eq("user_id", user.id);
+        setOwned((data ?? []) as any);
+      } catch {
+        /* ignore */
+      }
     })();
   }, [user]);
+
 
   // Realtime broadcast subscription per slug
   useEffect(() => {
