@@ -31,7 +31,9 @@ export type StudioDraftSpec = {
   play_url?: string;
   instructions?: string;
   offline_ok?: boolean;
+  cover_image_url?: string;
   generated_at?: string;
+
 };
 
 async function isAdmin(ctx: { supabase: any; userId: string }) {
