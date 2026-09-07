@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_ai_changes: {
+        Row: {
+          actor_id: string | null
+          applied_at: string | null
+          before_snapshot: Json
+          created_at: string
+          id: string
+          ops: Json
+          reverted_at: string | null
+          status: string
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          actor_id?: string | null
+          applied_at?: string | null
+          before_snapshot?: Json
+          created_at?: string
+          id?: string
+          ops?: Json
+          reverted_at?: string | null
+          status?: string
+          summary?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_id?: string | null
+          applied_at?: string | null
+          before_snapshot?: Json
+          created_at?: string
+          id?: string
+          ops?: Json
+          reverted_at?: string | null
+          status?: string
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           action: string
@@ -659,6 +698,30 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
