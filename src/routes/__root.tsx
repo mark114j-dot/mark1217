@@ -16,6 +16,7 @@ import { AuthProvider } from "@/lib/auth";
 import { MusicProvider } from "@/lib/music";
 import { registerPwa } from "@/lib/pwa";
 import { precacheOfflineGames } from "@/lib/offlineCache";
+import { SiteThemeLoader } from "@/lib/siteTheme";
 
 
 function NotFoundComponent() {
@@ -152,6 +153,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MusicProvider>
+          <SiteThemeLoader />
           <Outlet />
           <Toaster position="top-center" />
         </MusicProvider>
