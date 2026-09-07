@@ -22,6 +22,7 @@ import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as PlaySlugRouteImport } from './routes/play.$slug'
 import { Route as AdminEmotesRouteImport } from './routes/admin.emotes'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
+import { Route as AdminAiRouteImport } from './routes/admin.ai'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
 const StudioRoute = StudioRouteImport.update({
@@ -89,6 +90,11 @@ const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
   path: '/admin/announcements',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAiRoute = AdminAiRouteImport.update({
+  id: '/admin/ai',
+  path: '/admin/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MiniTypeCodeRoute = MiniTypeCodeRouteImport.update({
   id: '/mini/$type/$code',
   path: '/mini/$type/$code',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
+  '/admin/ai': typeof AdminAiRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
+  '/admin/ai': typeof AdminAiRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/studio': typeof StudioRoute
+  '/admin/ai': typeof AdminAiRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/emotes': typeof AdminEmotesRoute
   '/play/$slug': typeof PlaySlugRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/studio'
+    | '/admin/ai'
     | '/admin/announcements'
     | '/admin/emotes'
     | '/play/$slug'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/studio'
+    | '/admin/ai'
     | '/admin/announcements'
     | '/admin/emotes'
     | '/play/$slug'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/studio'
+    | '/admin/ai'
     | '/admin/announcements'
     | '/admin/emotes'
     | '/play/$slug'
@@ -205,6 +217,7 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StudioRoute: typeof StudioRoute
+  AdminAiRoute: typeof AdminAiRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminEmotesRoute: typeof AdminEmotesRoute
   PlaySlugRoute: typeof PlaySlugRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnnouncementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/ai': {
+      id: '/admin/ai'
+      path: '/admin/ai'
+      fullPath: '/admin/ai'
+      preLoaderRoute: typeof AdminAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mini/$type/$code': {
       id: '/mini/$type/$code'
       path: '/mini/$type/$code'
@@ -325,6 +345,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StudioRoute: StudioRoute,
+  AdminAiRoute: AdminAiRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminEmotesRoute: AdminEmotesRoute,
   PlaySlugRoute: PlaySlugRoute,
