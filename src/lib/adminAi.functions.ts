@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type AiOp =
-  | { type: "game.update"; slug: string; fields: Record<string, unknown> }
+  | { type: "game.update"; slug: string; fields: Record<string, string | number | boolean> }
   | { type: "game.status"; slug: string; status: "published" | "draft" | "archived" }
   | { type: "game.delete"; slug: string }
   | { type: "theme.set"; vars: Record<string, string> };
@@ -42,8 +42,8 @@ function sanitizeOps(raw: any): AiOp[] {
   for (const o of list.slice(0, 20)) {
     if (!o || typeof o !== "object") continue;
     if (o.type === "game.update" && typeof o.slug === "string") {
-      const fields: Record<string, unknown> = {};
-      for (const k of GAME_FIELDS) if (o.fields && o.fields[k] !== undefined) fields[k] = o.fields[k];
+      const fields: Record<string, string | number | boolean> = {};
+      for (const k of GAME_FIELDS) if (o.fields && o.fields[k] !== undefined) fields[k] = o.fields[k] as string | number | boolean;
       if (Object.keys(fields).length) out.push({ type: "game.update", slug: o.slug, fields });
     } else if (o.type === "game.status" && typeof o.slug === "string"
       && ["published", "draft", "archived"].includes(o.status)) {
@@ -173,12 +173,12 @@ export const aiApply = createServerFn({ method: "POST" })
       if (op.type === "theme.set") {
         const { data: cur } = await context.supabase
           .from("site_settings").select("value").eq("key", "theme").maybeSingle();
-        const merged = { ...(cur?.value?.vars ?? {}), ...op.vars };
+        const merged = { ...((cur?.value as any)?.vars ?? {}), ...op.vars };
         const { error: e } = await context.supabase.from("site_settings")
           .upsert({ key: "theme", value: { vars: merged }, updated_by: context.userId }, { onConflict: "key" });
         if (e) throw new Error(e.message);
       } else if (op.type === "game.update") {
-        const { error: e } = await context.supabase.from("games").update(op.fields).eq("slug", op.slug);
+        const { error: e } = await context.supabase.from("games").update(op.fields as any).eq("slug", op.slug);
         if (e) throw new Error(e.message);
       } else if (op.type === "game.status") {
         const { error: e } = await context.supabase.from("games").update({ status: op.status }).eq("slug", op.slug);
@@ -254,5 +254,5 @@ export const aiListChanges = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
-    return (data ?? []) as AiChange[];
+    return (data ?? []) as unknown as AiChange[];
   });
