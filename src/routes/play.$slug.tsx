@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { recordPlay } from "@/lib/plays.functions";
 import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
-import { getClientId } from "@/lib/game";
+import { getClientId, getSavedName, getSavedAvatar, saveName } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
 import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 import { readCachedOfflineGame } from "@/lib/offlineCache";
@@ -72,11 +72,18 @@ function PlayGame() {
     if (!search.room) navigate({ search: { room: roomCode }, replace: true });
   }, [search.room, roomCode, isOffline]);
 
+  const [nickname, setNickname] = useState("");
+  useEffect(() => {
+    const saved = getSavedName();
+    const fromAccount = (user?.user_metadata?.username as string) ?? user?.email?.split("@")[0];
+    setNickname(saved || fromAccount || "");
+  }, [user]);
+
   const meIdentity = useMemo(() => ({
     id: getClientId(),
-    name: (user?.user_metadata?.username as string) ?? user?.email?.split("@")[0] ?? "玩家",
-    avatar: (user?.user_metadata?.avatar as string) ?? "🐱",
-  }), [user]);
+    name: nickname || "玩家",
+    avatar: (user?.user_metadata?.avatar as string) ?? getSavedAvatar(),
+  }), [user, nickname]);
 
 
   useEffect(() => {
@@ -267,6 +274,23 @@ function PlayGame() {
           <div className="font-display font-bold truncate">{game.name}</div>
           <div className="text-xs text-muted-foreground truncate">{game.description}</div>
         </div>
+        {!game.offline_ok && (
+          <button
+            onClick={() => {
+              const next = window.prompt("設定你的暱稱（會自動記住）", nickname || "");
+              if (next === null) return;
+              const clean = next.trim().slice(0, 12);
+              if (!clean) return;
+              saveName(clean);
+              setNickname(clean);
+            }}
+            className="border-brutal shadow-brutal-sm rounded-lg px-2 py-1 bg-card text-xs font-bold max-w-[9rem] truncate"
+            aria-label="設定暱稱"
+            title="設定暱稱"
+          >
+            {(user?.user_metadata?.avatar as string) ?? getSavedAvatar()} {nickname || "設定暱稱"}
+          </button>
+        )}
         {user && owned.length > 0 && !game.offline_ok && (
           <button
             onClick={() => setPickerOpen((v) => !v)}
