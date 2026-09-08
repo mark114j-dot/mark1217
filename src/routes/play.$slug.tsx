@@ -274,6 +274,23 @@ function PlayGame() {
           <div className="font-display font-bold truncate">{game.name}</div>
           <div className="text-xs text-muted-foreground truncate">{game.description}</div>
         </div>
+        {!game.offline_ok && (
+          <button
+            onClick={() => {
+              const next = window.prompt("設定你的暱稱（會自動記住）", nickname || "");
+              if (next === null) return;
+              const clean = next.trim().slice(0, 12);
+              if (!clean) return;
+              saveName(clean);
+              setNickname(clean);
+            }}
+            className="border-brutal shadow-brutal-sm rounded-lg px-2 py-1 bg-card text-xs font-bold max-w-[9rem] truncate"
+            aria-label="設定暱稱"
+            title="設定暱稱"
+          >
+            {(user?.user_metadata?.avatar as string) ?? getSavedAvatar()} {nickname || "設定暱稱"}
+          </button>
+        )}
         {user && owned.length > 0 && !game.offline_ok && (
           <button
             onClick={() => setPickerOpen((v) => !v)}
