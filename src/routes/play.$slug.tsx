@@ -7,6 +7,7 @@ import { getClientId, getSavedName, getSavedAvatar, saveName } from "@/lib/game"
 import { useAuth } from "@/lib/auth";
 import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 import { readCachedOfflineGame } from "@/lib/offlineCache";
+import { FullscreenButton, useFullscreen } from "@/components/FullscreenButton";
 
 const BASE_URL = "https://mark1217.lovable.app";
 
@@ -95,6 +96,7 @@ function PlayGame() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [effects, setEffects] = useState<BroadcastEvent[]>([]);
   const seenRef = useRef<Set<string>>(new Set());
+  const fullscreen = useFullscreen<HTMLDivElement>();
 
   // ---- Multiplayer room ----
   const search = Route.useSearch();
@@ -362,7 +364,8 @@ function PlayGame() {
         )}
       </div>
       )}
-      <div className="flex-1 relative bg-black">
+      <div ref={fullscreen.ref} className="flex-1 relative bg-black mobile-game-frame fullscreen-game-target">
+        <FullscreenButton active={fullscreen.active} onClick={fullscreen.toggle} className="absolute right-2 top-2" />
         {game.play_url ? (
           <iframe
             ref={iframeRef}
