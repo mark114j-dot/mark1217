@@ -16,19 +16,19 @@ export const Route = createFileRoute("/games")({
   component: GamesHub,
   head: () => ({
     meta: [
-      { title: "免費線上小遊戲｜多人、益智、棋盤與離線遊戲大廳｜畫聊 Doodle" },
-      { name: "description", content: "畫聊 Doodle 免費線上小遊戲大廳，提供多人遊戲、益智解謎、棋盤、數學與反應遊戲。免安裝、免註冊，支援已下載遊戲離線遊玩。" },
+      { title: "免費小遊戲大廳｜線上多人、益智、棋盤遊戲｜畫聊 Doodle" },
+      { name: "description", content: "免費小遊戲大廳「畫聊 Doodle」集合線上多人遊戲、益智解謎、棋盤遊戲、數學數感、邏輯推理與反應遊戲。免安裝、免註冊，開瀏覽器即可遊玩，部分遊戲支援離線。" },
       { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
-      { property: "og:title", content: "免費線上小遊戲｜多人、益智、棋盤與離線遊戲大廳" },
-      { property: "og:description", content: "免費小遊戲大廳：多人連線、益智解謎、棋盤、數感與反應遊戲，免安裝即可開始，部分遊戲支援離線遊玩。" },
+      { property: "og:title", content: "免費小遊戲大廳｜線上多人、益智、棋盤遊戲" },
+      { property: "og:description", content: "免費小遊戲大廳，集合多人連線、益智解謎、棋盤、數學數感、邏輯推理與反應遊戲，免安裝即可玩。" },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "畫聊 Doodle" },
       { property: "og:locale", content: "zh_TW" },
       { property: "og:url", content: `${BASE_URL}/games` },
       { property: "og:image", content: `${BASE_URL}/pwa-icon.png` },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "免費線上小遊戲｜畫聊 Doodle" },
-      { name: "twitter:description", content: "免費多人與單人小遊戲，免安裝即可遊玩，部分遊戲支援離線。" },
+      { name: "twitter:title", content: "免費小遊戲大廳｜畫聊 Doodle" },
+      { name: "twitter:description", content: "免費線上多人與單人小遊戲，包含益智、棋盤、邏輯、數感與反應遊戲。" },
       { name: "twitter:image", content: `${BASE_URL}/pwa-icon.png` },
     ],
     links: [{ rel: "canonical", href: `${BASE_URL}/games` }],
@@ -37,11 +37,19 @@ export const Route = createFileRoute("/games")({
       children: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "CollectionPage",
-        name: "免費線上小遊戲大廳",
-        description: "免費線上多人與單人小遊戲集合。",
+        name: "免費小遊戲大廳｜線上多人與益智遊戲",
+        headline: "免費小遊戲大廳",
+        description: "免費線上多人與單人小遊戲集合，包含益智、棋盤、數學、邏輯與反應遊戲。",
         url: `${BASE_URL}/games`,
         inLanguage: "zh-TW",
         isPartOf: { "@type": "WebSite", name: "畫聊 Doodle", url: BASE_URL },
+        about: [
+          { "@type": "Thing", name: "免費小遊戲" },
+          { "@type": "Thing", name: "線上多人遊戲" },
+          { "@type": "Thing", name: "益智遊戲" },
+          { "@type": "Thing", name: "棋盤遊戲" },
+          { "@type": "Thing", name: "數學遊戲" },
+        ],
       }),
     }],
   }),
@@ -148,6 +156,9 @@ function GamesHub() {
           <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition"><ArrowLeft className="w-5 h-5" /></Link>
           <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 免費小遊戲大廳</h1>
         </div>
+        <p className="mb-5 max-w-3xl text-sm leading-6 text-muted-foreground">
+          在畫聊 Doodle 的免費小遊戲大廳，可以直接玩線上多人遊戲與單人小遊戲，從繪圖猜題、棋盤遊戲到益智解謎、數學數感、邏輯推理與反應挑戰都能找到。免安裝、免註冊，支援的遊戲也能先下載後離線遊玩。
+        </p>
         <div className={`mb-4 rounded-xl border-brutal px-3 py-2 text-xs flex flex-wrap items-center gap-2 ${offlineMode ? "bg-amber-50" : "bg-emerald-50"}`}>
           <span className="font-bold">{offlineMode ? "📴 目前離線中" : "🟢 已連線"}</span>
           <span className="text-foreground/70">{cacheInfo.count > 0 ? `已下載 ${cacheInfo.count} 款免連線遊戲，斷網也能直接玩。` : "尚未下載離線遊戲，按右邊按鈕即可存到裝置。"}</span>
@@ -180,7 +191,7 @@ function GamesHub() {
             ))}
           </div>
         )}
-        {howTo && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setHowTo(null)}><div className="w-full max-w-md rounded-2xl border-brutal shadow-brutal bg-card p-5" onClick={(e) => e.stopPropagation()}><div className="flex items-center gap-2"><span className="text-3xl">{howTo.emoji ?? "🎮"}</span><h2 className="font-display text-xl font-bold">{howTo.name}</h2><button onClick={() => setHowTo(null)} className="ml-auto"><X /></button></div><p className="mt-3 text-sm text-muted-foreground">{howTo.description || "免費線上小遊戲"}</p>{howTo.instructions && <p className="mt-3 whitespace-pre-wrap text-sm">{howTo.instructions}</p>}<button onClick={() => { setHowTo(null); navigate({ to: "/play/$slug", params: { slug: howTo.slug }, search: { room: undefined } }); }} className="mt-5 w-full rounded-xl border-brutal shadow-brutal-sm bg-primary text-primary-foreground py-2 font-bold">開始遊玩 →</button></div></div>}
+        {howTo && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setHowTo(null)}><div className="w-full max-w-md rounded-2xl border-brutal shadow-brutal bg-card p-6" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-between gap-3"><h2 className="font-display text-xl font-black">{howTo.emoji ?? "🎮"} {howTo.name}</h2><button onClick={() => setHowTo(null)} className="rounded-full p-2 hover:bg-muted" aria-label="關閉"><X className="w-5 h-5" /></button></div><p className="mt-4 text-sm text-muted-foreground whitespace-pre-wrap">{howTo.instructions || howTo.description || "目前沒有提供遊戲說明。"}</p><button onClick={() => { setHowTo(null); navigate({ to: "/play/$slug", params: { slug: howTo.slug }, search: { room: undefined } }); }} className="mt-5 w-full border-brutal shadow-brutal-sm rounded-xl bg-primary px-4 py-3 font-display font-bold text-primary-foreground">開始遊玩 →</button></div></div>}
       </div>
     </div>
   );
