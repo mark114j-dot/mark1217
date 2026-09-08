@@ -16,10 +16,10 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "畫聊 Doodle — 免費線上多人繪圖猜題與益智小遊戲" },
-      { name: "description", content: "畫聊 Doodle 提供 26 款免安裝、免註冊的線上多人遊戲：即時繪圖猜題、五子棋、海戰棋、24 點與質數攀登，建立房間分享代碼就能和朋友對戰。" },
-      { property: "og:title", content: "畫聊 Doodle — 免費線上多人繪圖猜題與益智小遊戲" },
-      { property: "og:description", content: "26 款免安裝線上多人遊戲：繪圖猜題、五子棋、海戰棋、24 點與質數攀登，開房間分享代碼就能一起玩。" },
+      { title: "免費小遊戲大廳 — 畫聊 Doodle：免安裝線上多人遊戲" },
+      { name: "description", content: "免費小遊戲大廳「畫聊 Doodle」提供 26 款免安裝、免註冊的線上多人遊戲：即時繪圖猜題、五子棋、海戰棋、24 點與質數攀登，建立房間分享代碼就能和朋友對戰。" },
+      { property: "og:title", content: "免費小遊戲大廳 — 畫聊 Doodle：免安裝線上多人遊戲" },
+      { property: "og:description", content: "免費小遊戲大廳：26 款免安裝線上多人遊戲，繪圖猜題、五子棋、海戰棋、24 點與質數攀登，開房間分享代碼就能一起玩。" },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://mark1217.lovable.app/" },
     ],
