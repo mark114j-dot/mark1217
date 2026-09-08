@@ -14,10 +14,10 @@ export const Route = createFileRoute("/games")({
   component: GamesHub,
   head: () => ({
     meta: [
-      { title: "遊戲大廳 — 熱門與最新發布的線上遊戲" },
-      { name: "description", content: "瀏覽工作室發布的線上遊戲，依熱門、最新與分類挑選，點開圖示立即開始遊玩。" },
-      { property: "og:title", content: "遊戲大廳 — 熱門與最新發布的線上遊戲" },
-      { property: "og:description", content: "瀏覽工作室發布的線上遊戲，依熱門、最新與分類挑選，點開圖示立即開始遊玩。" },
+      { title: "免費小遊戲大廳 — 熱門與最新發布的免費線上遊戲" },
+      { name: "description", content: "免費小遊戲大廳：瀏覽工作室發布的免費線上遊戲，依熱門、最新與分類挑選，點開圖示立即開始遊玩，免安裝免註冊。" },
+      { property: "og:title", content: "免費小遊戲大廳 — 熱門與最新發布的免費線上遊戲" },
+      { property: "og:description", content: "免費小遊戲大廳：瀏覽工作室發布的免費線上遊戲，依熱門、最新與分類挑選，點開圖示立即開始遊玩。" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "https://mark1217.lovable.app/games" },
@@ -174,7 +174,7 @@ function GamesHub() {
           <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 遊戲大廳</h1>
+          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 免費小遊戲大廳</h1>
         </div>
 
         {/* Offline status / download */}

@@ -16,10 +16,10 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "畫聊 Doodle — 免費線上多人繪圖猜題與益智小遊戲" },
-      { name: "description", content: "畫聊 Doodle 提供 26 款免安裝、免註冊的線上多人遊戲：即時繪圖猜題、五子棋、海戰棋、24 點與質數攀登，建立房間分享代碼就能和朋友對戰。" },
-      { property: "og:title", content: "畫聊 Doodle — 免費線上多人繪圖猜題與益智小遊戲" },
-      { property: "og:description", content: "26 款免安裝線上多人遊戲：繪圖猜題、五子棋、海戰棋、24 點與質數攀登，開房間分享代碼就能一起玩。" },
+      { title: "免費小遊戲大廳 — 畫聊 Doodle：免安裝線上多人遊戲" },
+      { name: "description", content: "免費小遊戲大廳「畫聊 Doodle」提供 26 款免安裝、免註冊的線上多人遊戲：即時繪圖猜題、五子棋、海戰棋、24 點與質數攀登，建立房間分享代碼就能和朋友對戰。" },
+      { property: "og:title", content: "免費小遊戲大廳 — 畫聊 Doodle：免安裝線上多人遊戲" },
+      { property: "og:description", content: "免費小遊戲大廳：26 款免安裝線上多人遊戲，繪圖猜題、五子棋、海戰棋、24 點與質數攀登，開房間分享代碼就能一起玩。" },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://mark1217.lovable.app/" },
     ],
@@ -142,10 +142,10 @@ function Index() {
             <span className="w-1.5 h-1.5 rounded-full bg-accent" /> 免安裝 · 免註冊 · 開瀏覽器就能對戰
           </div>
           <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight leading-tight">
-            畫聊 Doodle — 免費線上多人 <span className="text-primary">繪圖猜題與益智小遊戲</span>
+            免費小遊戲大廳 — <span className="text-primary">畫聊 Doodle 線上多人遊戲</span>
           </h1>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-            繪圖猜題、五子棋、海戰棋、算術 24 點、質數攀登…… 26 款即時連線遊戲，訓練邏輯、推理與數感。
+            免費小遊戲大廳精選繪圖猜題、五子棋、海戰棋、算術 24 點、質數攀登…… 26 款即時連線遊戲，訓練邏輯、推理與數感。
           </p>
         </motion.div>
 
