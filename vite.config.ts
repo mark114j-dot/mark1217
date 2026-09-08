@@ -7,8 +7,6 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-// @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
@@ -18,13 +16,13 @@ export default defineConfig({
       VitePWA({
         strategies: "generateSW",
         registerType: "autoUpdate",
-        injectRegister: null,
+        injectRegister: "script",
         filename: "sw.js",
         devOptions: { enabled: false },
         manifest: {
           name: "畫聊 Doodle — 多人遊戲平台",
           short_name: "畫聊",
-          description: "即時繪圖猜題與多人小遊戲平台，免連線遊戲可離線遊玩。",
+          description: "即時繪圖猜題與多人小遊戲平台，並支援離線單人街機遊戲。",
           start_url: "/",
           scope: "/",
           display: "standalone",
@@ -38,8 +36,8 @@ export default defineConfig({
         },
         workbox: {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-          navigateFallback: "/",
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+          navigateFallback: "/offline.html",
+          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//, /^\/rest\//],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
@@ -50,6 +48,7 @@ export default defineConfig({
               options: {
                 cacheName: "html-navigations",
                 networkTimeoutSeconds: 5,
+                cacheableResponse: { statuses: [0, 200] },
                 expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
             },
@@ -63,7 +62,6 @@ export default defineConfig({
               },
             },
             {
-              // Game metadata + offline game HTML from the backend
               urlPattern: ({ url, request }) =>
                 request.method === "GET" && /\/rest\/v1\/(games|announcements)/.test(url.pathname),
               handler: "NetworkFirst",
@@ -75,7 +73,6 @@ export default defineConfig({
               },
             },
             {
-              // Game icons / covers
               urlPattern: ({ request }) => request.destination === "image",
               handler: "CacheFirst",
               options: {
