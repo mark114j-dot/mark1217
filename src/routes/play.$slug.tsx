@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { recordPlay } from "@/lib/plays.functions";
 import { ArrowLeft, Smile, Users, Copy } from "lucide-react";
-import { getClientId } from "@/lib/game";
+import { getClientId, getSavedName, getSavedAvatar, saveName } from "@/lib/game";
 import { useAuth } from "@/lib/auth";
 import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 import { readCachedOfflineGame } from "@/lib/offlineCache";
@@ -72,11 +72,18 @@ function PlayGame() {
     if (!search.room) navigate({ search: { room: roomCode }, replace: true });
   }, [search.room, roomCode, isOffline]);
 
+  const [nickname, setNickname] = useState("");
+  useEffect(() => {
+    const saved = getSavedName();
+    const fromAccount = (user?.user_metadata?.username as string) ?? user?.email?.split("@")[0];
+    setNickname(saved || fromAccount || "");
+  }, [user]);
+
   const meIdentity = useMemo(() => ({
     id: getClientId(),
-    name: (user?.user_metadata?.username as string) ?? user?.email?.split("@")[0] ?? "玩家",
-    avatar: (user?.user_metadata?.avatar as string) ?? "🐱",
-  }), [user]);
+    name: nickname || "玩家",
+    avatar: (user?.user_metadata?.avatar as string) ?? getSavedAvatar(),
+  }), [user, nickname]);
 
 
   useEffect(() => {
