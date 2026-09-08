@@ -150,15 +150,11 @@ function RoomPage() {
           setJoining(false);
         };
 
-        if (existing || isHost || !room.require_approval) {
+        if (existing || isHost || !room.require_approval || !user) {
+          // 未登入的訪客也能直接進房遊玩
           await doJoin();
         } else {
-          // Need approval
-          if (!user) {
-            toast.error("此房間需要房主同意才能加入，請先登入");
-            navigate({ to: "/login" });
-            return;
-          }
+
           await supabase.from("room_join_requests").upsert(
             {
               room_id: room.id,
