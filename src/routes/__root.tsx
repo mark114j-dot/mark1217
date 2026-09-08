@@ -18,7 +18,6 @@ import { registerPwa } from "@/lib/pwa";
 import { precacheOfflineGames } from "@/lib/offlineCache";
 import { SiteThemeLoader } from "@/lib/siteTheme";
 
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -82,35 +81,63 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "google-site-verification", content: "u93TDIJ0Fky7-_USm_pgoCWXCG0D_ZdfzIZhZIJjLoA" },
-      { title: "畫畫" },
-      { name: "description", content: "Playful Realms is a multiplayer online game platform offering a variety of connected gaming experiences." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "畫畫" },
-      { property: "og:description", content: "Playful Realms is a multiplayer online game platform offering a variety of connected gaming experiences." },
+      { name: "theme-color", content: "#ffffff" },
+      { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+      { title: "畫聊 Doodle｜免費線上多人小遊戲平台" },
+      { name: "description", content: "畫聊 Doodle 是免費線上多人小遊戲平台，提供繪圖猜題、五子棋、海戰棋、24 點、益智與數感遊戲。免安裝、免註冊，開瀏覽器就能和朋友一起玩。" },
+      { name: "author", content: "畫聊 Doodle" },
+      { property: "og:locale", content: "zh_TW" },
+      { property: "og:site_name", content: "畫聊 Doodle" },
+      { property: "og:title", content: "畫聊 Doodle｜免費線上多人小遊戲平台" },
+      { property: "og:description", content: "免費線上多人小遊戲平台，繪圖猜題、五子棋、海戰棋、24 點與更多益智遊戲，免安裝就能和朋友一起玩。" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "畫畫" },
-      { name: "twitter:description", content: "Playful Realms is a multiplayer online game platform offering a variety of connected gaming experiences." },
+      { property: "og:url", content: "https://mark1217.lovable.app/" },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b1a2abf9-b84a-4dec-9e68-ee09ba4854ac/id-preview-25f1b820--f8cd0126-39cf-4ace-82de-8826dad3b9d6.lovable.app-1779343089965.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "畫聊 Doodle｜免費線上多人小遊戲平台" },
+      { name: "twitter:description", content: "免費線上多人小遊戲平台，免安裝就能玩多人益智與派對小遊戲。" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b1a2abf9-b84a-4dec-9e68-ee09ba4854ac/id-preview-25f1b820--f8cd0126-39cf-4ace-82de-8826dad3b9d6.lovable.app-1779343089965.png" },
     ],
     links: [
+      { rel: "canonical", href: "https://mark1217.lovable.app/" },
+      { rel: "alternate", hrefLang: "zh-TW", href: "https://mark1217.lovable.app/" },
+      { rel: "alternate", hrefLang: "x-default", href: "https://mark1217.lovable.app/" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&family=Caveat:wght@600;700&display=swap",
       },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/pwa-192.png" },
     ],
-
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebSite",
+              "@id": "https://mark1217.lovable.app/#website",
+              url: "https://mark1217.lovable.app/",
+              name: "畫聊 Doodle",
+              description: "免費線上多人小遊戲平台",
+              inLanguage: "zh-TW",
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://mark1217.lovable.app/#organization",
+              name: "畫聊 Doodle",
+              url: "https://mark1217.lovable.app/",
+              logo: "https://mark1217.lovable.app/pwa-192.png",
+            },
+          ],
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -120,7 +147,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="zh-TW">
       <head>
         <HeadContent />
       </head>
@@ -149,7 +176,6 @@ function RootComponent() {
   }, []);
 
   return (
-
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MusicProvider>
