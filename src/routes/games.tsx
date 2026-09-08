@@ -108,7 +108,8 @@ function GamesHub() {
         rows = await readCachedOfflineGames(); setOfflineMode(true); setOnlyOffline(true);
       } else {
         try {
-          const { data } = await supabase.from("games").select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,html_content,play_url,offline_ok").eq("status", "published").order("created_at", { ascending: false });
+          // Keep the lobby response small. Full HTML is only needed when opening a game.
+          const { data } = await supabase.from("games").select("id,slug,name,emoji,description,cover_image_url,instructions,category,play_count,created_at,play_url,offline_ok").eq("status", "published").order("created_at", { ascending: false });
           rows = (data ?? []) as any[];
         } catch { rows = []; }
         if (rows.length === 0) {
@@ -116,83 +117,55 @@ function GamesHub() {
           if (rows.length > 0) { setOfflineMode(true); setOnlyOffline(true); }
         }
       }
-      setGames(rows.filter((g) => g.html_content || g.play_url) as PubGame[]);
+      setGames(rows as PubGame[]);
       setLoading(false); setCacheInfo(await getOfflineMeta());
     })();
   }, []);
 
   useEffect(() => {
-    const on = () => setOfflineMode(false); const off = () => setOfflineMode(true);
-    window.addEventListener("online", on); window.addEventListener("offline", off);
-    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+    const onCache = () => getOfflineMeta().then(setCacheInfo);
+    window.addEventListener("offline-cache-updated", onCache);
+    return () => window.removeEventListener("offline-cache-updated", onCache);
   }, []);
 
-  async function downloadOffline() {
+  const visibleGames = useMemo(() => {
+    let list = onlyOffline ? games.filter((g) => g.offline_ok) : games;
+    if (cat !== "all") list = list.filter((g) => g.category === cat);
+    if (tab === "hot") list = [...list].sort((a, b) => (b.play_count ?? 0) - (a.play_count ?? 0));
+    if (tab === "new") list = list.filter(isNew);
+    return list;
+  }, [games, onlyOffline, cat, tab]);
+
+  async function cacheOffline() {
+    if (caching) return;
     setCaching(true);
-    try { const n = await precacheOfflineGames(); setCacheInfo(await getOfflineMeta()); toast.success(n > 0 ? `已下載 ${n} 款免連線遊戲，斷網也能玩` : "目前沒有可離線下載的遊戲"); }
-    catch { toast.error("離線下載失敗，請稍後再試"); }
-    finally { setCaching(false); }
+    const count = await precacheOfflineGames();
+    setCacheInfo(await getOfflineMeta());
+    setCaching(false);
+    toast.success(count > 0 ? `已準備 ${count} 款離線遊戲` : "目前沒有可快取的離線遊戲");
   }
-  async function handleDelete(g: PubGame) {
-    if (!confirm(`${T("confirm_delete")}\n\n「${g.name}」`)) return;
-    try { await delFn({ data: { id: g.id } }); toast.success("已刪除"); setGames((rows) => rows.filter((r) => r.id !== g.id)); }
-    catch (e: any) { toast.error(e.message || "刪除失敗"); }
+
+  async function removeGame(g: PubGame) {
+    if (!confirm(`確定刪除「${g.name}」？`)) return;
+    try {
+      await delFn({ data: { id: g.id } });
+      setGames((prev) => prev.filter((x) => x.id !== g.id));
+      toast.success("已刪除");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "刪除失敗"); }
   }
-  const cats = useMemo(() => Array.from(new Set(games.map((g) => g.category).filter(Boolean) as string[])), [games]);
-  const list = useMemo(() => {
-    let rows = games.slice();
-    if (cat !== "all") rows = rows.filter((g) => (g.category ?? "misc") === cat);
-    if (onlyOffline) rows = rows.filter((g) => g.offline_ok);
-    if (tab === "hot") rows.sort((a, b) => (b.play_count ?? 0) - (a.play_count ?? 0));
-    else if (tab === "new") rows.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-    else rows.sort((a, b) => a.name.localeCompare(b.name));
-    return rows;
-  }, [games, cat, tab, onlyOffline]);
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center gap-3 mb-5">
-          <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 免費小遊戲大廳</h1>
-        </div>
-        <p className="mb-5 max-w-3xl text-sm leading-6 text-muted-foreground">
-          在畫聊 Doodle 的免費小遊戲大廳，可以直接玩線上多人遊戲與單人小遊戲，從繪圖猜題、棋盤遊戲到益智解謎、數學數感、邏輯推理與反應挑戰都能找到。免安裝、免註冊，支援的遊戲也能先下載後離線遊玩。
-        </p>
-        <div className={`mb-4 rounded-xl border-brutal px-3 py-2 text-xs flex flex-wrap items-center gap-2 ${offlineMode ? "bg-amber-50" : "bg-emerald-50"}`}>
-          <span className="font-bold">{offlineMode ? "📴 目前離線中" : "🟢 已連線"}</span>
-          <span className="text-foreground/70">{cacheInfo.count > 0 ? `已下載 ${cacheInfo.count} 款免連線遊戲，斷網也能直接玩。` : "尚未下載離線遊戲，按右邊按鈕即可存到裝置。"}</span>
-          <span className="flex-1" />
-          <button onClick={downloadOffline} disabled={caching || offlineMode} className="border-brutal shadow-brutal-sm rounded-lg bg-card px-3 py-1 font-bold disabled:opacity-40">{caching ? "下載中…" : "⬇ 下載離線遊戲"}</button>
-        </div>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {([{ id: "hot", label: "🔥 熱門" }, { id: "new", label: "🆕 最新發布" }, { id: "all", label: "📚 全部" }] as const).map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`rounded-full px-4 py-1.5 text-sm font-bold border-brutal transition ${tab === t.id ? "bg-primary text-primary-foreground shadow-brutal-sm" : "bg-card hover:bg-muted"}`}>{t.label}</button>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2 mb-6">
-          <button onClick={() => setCat("all")} className={`rounded-full px-3 py-1 text-xs font-bold border border-foreground/20 ${cat === "all" ? "bg-secondary text-secondary-foreground" : "bg-card hover:bg-muted"}`}>全部分類</button>
-          <button onClick={() => setOnlyOffline((v) => !v)} title="不需網路也能玩的遊戲" className={`rounded-full px-3 py-1 text-xs font-bold border border-foreground/20 ${onlyOffline ? "bg-emerald-600 text-white" : "bg-card hover:bg-muted"}`}>📴 免連線</button>
-          {cats.map((c) => <button key={c} onClick={() => setCat(c)} className={`rounded-full px-3 py-1 text-xs font-bold border border-foreground/20 ${cat === c ? "bg-secondary text-secondary-foreground" : "bg-card hover:bg-muted"}`}>{CAT_LABEL[c] ?? c}</button>)}
-        </div>
-        {loading ? <div className="text-center text-muted-foreground py-16">載入中…</div> : list.length === 0 ? <div className="text-center text-muted-foreground py-16">目前還沒有發布的遊戲。</div> : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 sm:gap-5">
-            {list.map((g, i) => (
-              <motion.div key={g.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: Math.min(i * 0.03, 0.4) }} className="relative flex flex-col items-center">
-                <button onClick={() => navigate({ to: "/play/$slug", params: { slug: g.slug }, search: { room: undefined } })} className="group relative w-full aspect-square rounded-[22%] overflow-hidden border-brutal shadow-brutal bg-card hover:-translate-y-1 hover:shadow-none transition" aria-label={g.name}>
-                  {g.cover_image_url ? <img src={g.cover_image_url} alt={`${g.name} 免費線上小遊戲圖示`} className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full grid place-items-center text-4xl sm:text-5xl bg-gradient-to-br from-primary/15 to-secondary/20">{g.emoji ?? "🎮"}</div>}
-                  {g.offline_ok && <span className="absolute bottom-1 right-1 rounded-full bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5">📴 免連線</span>}
-                  {tab !== "new" && isNew(g) && <span className="absolute top-1 left-1 rounded-full bg-secondary text-secondary-foreground text-[9px] font-black px-1.5 py-0.5">NEW</span>}
-                </button>
-                <div className="mt-1.5 w-full text-center"><div className="text-xs sm:text-sm font-bold truncate">{g.name}</div><div className="text-[10px] text-muted-foreground">▶ {g.play_count ?? 0}</div></div>
-                <button onClick={() => setHowTo(g)} title="怎麼玩" className="absolute -top-1.5 -right-1.5 rounded-full bg-card border border-foreground/25 p-1 shadow-sm hover:bg-muted transition"><Info className="w-3.5 h-3.5" /></button>
-                {isAdmin && <button onClick={() => handleDelete(g)} title={T("delete")} className="absolute -bottom-1 -right-1 rounded-full bg-red-100 border border-red-300 p-1 text-red-700"><X className="w-3 h-3" /></button>}
-              </motion.div>
-            ))}
-          </div>
-        )}
-        {howTo && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setHowTo(null)}><div className="w-full max-w-md rounded-2xl border-brutal shadow-brutal bg-card p-6" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-between gap-3"><h2 className="font-display text-xl font-black">{howTo.emoji ?? "🎮"} {howTo.name}</h2><button onClick={() => setHowTo(null)} className="rounded-full p-2 hover:bg-muted" aria-label="關閉"><X className="w-5 h-5" /></button></div><p className="mt-4 text-sm text-muted-foreground whitespace-pre-wrap">{howTo.instructions || howTo.description || "目前沒有提供遊戲說明。"}</p><button onClick={() => { setHowTo(null); navigate({ to: "/play/$slug", params: { slug: howTo.slug }, search: { room: undefined } }); }} className="mt-5 w-full border-brutal shadow-brutal-sm rounded-xl bg-primary px-4 py-3 font-display font-bold text-primary-foreground">開始遊玩 →</button></div></div>}
+    <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 md:px-6">
+      <div className="mb-8 flex items-center justify-between gap-3">
+        <Link to="/" className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold hover:bg-muted"><ArrowLeft className="h-4 w-4" />返回首頁</Link>
+        <div className="flex items-center gap-2"><button onClick={cacheOffline} disabled={caching} className="rounded-xl border px-3 py-2 text-sm font-bold">{caching ? "準備中…" : `離線快取${cacheInfo.count ? ` (${cacheInfo.count})` : ""}`}</button></div>
       </div>
-    </div>
+      <section className="mb-8"><h1 className="text-4xl font-black tracking-tight md:text-5xl">免費小遊戲大廳</h1><p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">在畫聊 Doodle 的免費小遊戲大廳，可以直接玩線上多人遊戲與單人小遊戲，從繪圖猜題、棋盤遊戲到益智解謎、數學數感、邏輯推理與反應挑戰都能找到。免安裝、免註冊，支援的遊戲也能先下載後離線遊玩。</p></section>
+      <div className="mb-6 flex flex-wrap gap-2"><button onClick={() => setTab("hot")} className={`rounded-xl px-4 py-2 font-bold ${tab === "hot" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>熱門</button><button onClick={() => setTab("new")} className={`rounded-xl px-4 py-2 font-bold ${tab === "new" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>最新</button><button onClick={() => setTab("all")} className={`rounded-xl px-4 py-2 font-bold ${tab === "all" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>全部</button><button onClick={() => setOnlyOffline((v) => !v)} className={`rounded-xl px-4 py-2 font-bold ${onlyOffline ? "bg-accent" : "bg-muted"}`}>只看可離線</button></div>
+      <div className="mb-8 flex flex-wrap gap-2">{["all", ...Object.keys(CAT_LABEL)].map((key) => <button key={key} onClick={() => setCat(key)} className={`rounded-full border px-3 py-1.5 text-sm font-bold ${cat === key ? "bg-foreground text-background" : "bg-card"}`}>{key === "all" ? "全部分類" : CAT_LABEL[key]}</button>)}</div>
+      {offlineMode && <div className="mb-6 rounded-2xl border bg-accent/30 p-4 text-sm font-semibold">目前使用本機離線快取。已保存 {cacheInfo.count} 款遊戲。</div>}
+      {loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <div key={i} className="h-56 animate-pulse rounded-3xl bg-muted" />)}</div> : visibleGames.length === 0 ? <div className="rounded-3xl border p-10 text-center text-muted-foreground">目前沒有符合條件的遊戲。</div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{visibleGames.map((g) => <motion.article key={g.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-3xl border bg-card shadow-sm"><Link to="/play/$slug" params={{ slug: g.slug }} className="block"><div className="aspect-[16/9] bg-muted">{g.cover_image_url ? <img src={g.cover_image_url} alt={g.name} loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-6xl">{g.emoji ?? "🎮"}</div>}</div><div className="p-4"><div className="mb-2 flex items-center justify-between gap-2"><h2 className="line-clamp-1 text-lg font-black">{g.name}</h2>{isNew(g) && <span className="rounded-full bg-secondary px-2 py-1 text-xs font-black">NEW</span>}</div><p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">{g.description || "免費小遊戲，立即開始。"}</p><div className="mt-3 flex items-center justify-between text-xs text-muted-foreground"><span>{CAT_LABEL[g.category ?? "misc"] ?? "其他"}</span><span>▶ {g.play_count ?? 0}</span></div></div></Link><div className="flex items-center justify-between border-t px-4 py-3"><button onClick={() => setHowTo(g)} className="inline-flex items-center gap-1 text-sm font-bold"><Info className="h-4 w-4" />玩法</button>{isAdmin && <button onClick={() => removeGame(g)} className="text-sm font-bold text-destructive">刪除</button>}</div></motion.article>)}</div>}
+      {howTo && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-lg rounded-3xl bg-card p-6 shadow-2xl"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">{howTo.name}｜玩法</h2><button onClick={() => setHowTo(null)} className="icon-button rounded-full p-2" aria-label="關閉"><X className="h-5 w-5" /></button></div><p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{howTo.instructions || "開啟遊戲後依畫面提示操作。"}</p><button onClick={() => { setHowTo(null); navigate({ to: "/play/$slug", params: { slug: howTo.slug } }); }} className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-black text-primary-foreground">開始遊戲</button></div></div>}
+    </main>
   );
 }
