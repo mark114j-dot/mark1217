@@ -142,10 +142,10 @@ function Index() {
             <span className="w-1.5 h-1.5 rounded-full bg-accent" /> 免安裝 · 免註冊 · 開瀏覽器就能對戰
           </div>
           <h1 className="text-4xl sm:text-5xl font-display font-bold tracking-tight leading-tight">
-            畫聊 Doodle — 免費線上多人 <span className="text-primary">繪圖猜題與益智小遊戲</span>
+            免費小遊戲大廳 — <span className="text-primary">畫聊 Doodle 線上多人遊戲</span>
           </h1>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-            繪圖猜題、五子棋、海戰棋、算術 24 點、質數攀登…… 26 款即時連線遊戲，訓練邏輯、推理與數感。
+            免費小遊戲大廳精選繪圖猜題、五子棋、海戰棋、算術 24 點、質數攀登…… 26 款即時連線遊戲，訓練邏輯、推理與數感。
           </p>
         </motion.div>
 

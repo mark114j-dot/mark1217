@@ -174,7 +174,7 @@ function GamesHub() {
           <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg p-2 bg-card hover:translate-y-0.5 hover:shadow-none transition">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 遊戲大廳</h1>
+          <h1 className="font-display text-3xl sm:text-4xl font-black">🎮 免費小遊戲大廳</h1>
         </div>
 
         {/* Offline status / download */}
