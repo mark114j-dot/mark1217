@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /room/
+Disallow: /login
+Disallow: /friends
 
 Sitemap: https://mark1217.lovable.app/sitemap.xml
