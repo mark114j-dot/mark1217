@@ -14,7 +14,8 @@ export default defineConfig({
   vite: {
     plugins: [
       VitePWA({
-        strategies: "generateSW",
+        strategies: "injectManifest",
+        srcDir: "public",
         registerType: "autoUpdate",
         injectRegister: "script",
         filename: "sw.js",
@@ -34,54 +35,8 @@ export default defineConfig({
             { src: "/pwa-icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           ],
         },
-        workbox: {
+        injectManifest: {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-          navigateFallback: "/offline.html",
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//, /^\/rest\//],
-          cleanupOutdatedCaches: true,
-          clientsClaim: true,
-          skipWaiting: true,
-          runtimeCaching: [
-            {
-              urlPattern: ({ request }) => request.mode === "navigate",
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "html-navigations",
-                networkTimeoutSeconds: 5,
-                cacheableResponse: { statuses: [0, 200] },
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              },
-            },
-            {
-              urlPattern: ({ url, sameOrigin }) =>
-                sameOrigin && /\/assets\/|\.(?:js|css|woff2)$/.test(url.pathname),
-              handler: "CacheFirst",
-              options: {
-                cacheName: "static-assets",
-                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 60 },
-              },
-            },
-            {
-              urlPattern: ({ url, request }) =>
-                request.method === "GET" && /\/rest\/v1\/(games|announcements)/.test(url.pathname),
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "game-data",
-                networkTimeoutSeconds: 5,
-                cacheableResponse: { statuses: [0, 200] },
-                expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              },
-            },
-            {
-              urlPattern: ({ request }) => request.destination === "image",
-              handler: "CacheFirst",
-              options: {
-                cacheName: "images",
-                cacheableResponse: { statuses: [0, 200] },
-                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              },
-            },
-          ],
         },
       }),
     ],
