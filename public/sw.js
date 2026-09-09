@@ -7,8 +7,8 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox
 const CACHE = "pwabuilder-page";
 const offlineFallbackPage = "/offline.html";
 
-// VitePWA injectManifest inserts the build precache manifest here.
 workbox.precaching.precacheAndRoute(self.__WB_MANIFEST || []);
+workbox.precaching.cleanupOutdatedCaches();
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
@@ -30,7 +30,7 @@ if (workbox.navigationPreload.isSupported()) {
   workbox.navigationPreload.enable();
 }
 
-// Offline fallback for page navigation, based on the uploaded PWABuilder SW.
+// PWABuilder offline navigation fallback.
 self.addEventListener("fetch", (event) => {
   if (event.request.mode !== "navigate") return;
 
@@ -50,22 +50,6 @@ self.addEventListener("fetch", (event) => {
 });
 
 // Keep the existing Doodle caching behavior for assets, images and game data.
-workbox.routing.registerRoute(
-  ({ sameOrigin, request }) =>
-    sameOrigin && request.destination === "document",
-  new workbox.strategies.NetworkFirst({
-    cacheName: "html-navigations",
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new workbox.cacheableResponse.CacheableResponsePlugin({ statuses: [0, 200] }),
-      new workbox.expiration.ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24 * 30,
-      }),
-    ],
-  })
-);
-
 workbox.routing.registerRoute(
   ({ sameOrigin, url }) =>
     sameOrigin && /\/assets\/|\.(?:js|css|woff2)$/.test(url.pathname),
