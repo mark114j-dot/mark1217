@@ -16,11 +16,14 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "免費小遊戲大廳 — 畫聊 Doodle：免安裝線上多人遊戲" },
-      { name: "description", content: "免費小遊戲大廳「畫聊 Doodle」提供 26 款免安裝、免註冊的線上多人遊戲：即時繪圖猜題、五子棋、海戰棋、24 點與質數攀登，建立房間分享代碼就能和朋友對戰。" },
-      { property: "og:title", content: "免費小遊戲大廳 — 畫聊 Doodle：免安裝線上多人遊戲" },
-      { property: "og:description", content: "免費小遊戲大廳：26 款免安裝線上多人遊戲，繪圖猜題、五子棋、海戰棋、24 點與質數攀登，開房間分享代碼就能一起玩。" },
+      { title: "免費小遊戲大廳｜線上多人遊戲、益智遊戲｜畫聊 Doodle" },
+      { name: "description", content: "畫聊 Doodle 是免費小遊戲大廳，提供線上多人遊戲與單人益智遊戲，包含繪圖猜題、五子棋、海戰棋、24 點、質數攀登、邏輯與數感挑戰。免安裝、免註冊，開瀏覽器即可遊玩。" },
+      { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+      { property: "og:title", content: "免費小遊戲大廳｜線上多人遊戲、益智遊戲｜畫聊 Doodle" },
+      { property: "og:description", content: "免費線上小遊戲集合，包含多人連線、繪圖猜題、棋盤遊戲、數學數感、邏輯推理與單人益智遊戲。免安裝即可玩。" },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "畫聊 Doodle" },
+      { property: "og:locale", content: "zh_TW" },
       { property: "og:url", content: "https://mark1217.lovable.app/" },
     ],
     links: [{ rel: "canonical", href: "https://mark1217.lovable.app/" }],
@@ -28,13 +31,34 @@ export const Route = createFileRoute("/")({
       type: "application/ld+json",
       children: JSON.stringify({
         "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        name: "畫聊 Doodle",
-        applicationCategory: "GameApplication",
-        operatingSystem: "Web",
-        url: "https://mark1217.lovable.app/",
-        description: "免安裝的線上多人繪圖猜題與益智小遊戲平台。",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "TWD" },
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": "https://mark1217.lovable.app/#webpage",
+            name: "免費小遊戲大廳｜畫聊 Doodle",
+            url: "https://mark1217.lovable.app/",
+            description: "免費線上多人與單人小遊戲平台，包含繪圖猜題、棋盤、益智、邏輯與數感遊戲。",
+            inLanguage: "zh-TW",
+            isPartOf: { "@type": "WebSite", "@id": "https://mark1217.lovable.app/#website", name: "畫聊 Doodle", url: "https://mark1217.lovable.app/" },
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://mark1217.lovable.app/#website",
+            name: "畫聊 Doodle",
+            url: "https://mark1217.lovable.app/",
+            description: "免費小遊戲大廳與線上多人遊戲平台。",
+            inLanguage: "zh-TW",
+          },
+          {
+            "@type": "SoftwareApplication",
+            name: "畫聊 Doodle",
+            applicationCategory: "GameApplication",
+            operatingSystem: "Web",
+            url: "https://mark1217.lovable.app/",
+            description: "免安裝的線上多人繪圖猜題與益智小遊戲平台。",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "TWD" },
+          },
+        ],
       }),
     }],
   }),
@@ -145,10 +169,9 @@ function Index() {
             免費小遊戲大廳 — <span className="text-primary">畫聊 Doodle 線上多人遊戲</span>
           </h1>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-            免費小遊戲大廳精選繪圖猜題、五子棋、海戰棋、算術 24 點、質數攀登…… 26 款即時連線遊戲，訓練邏輯、推理與數感。
+            免費線上小遊戲集合，從繪圖猜題、五子棋、海戰棋到 24 點與質數攀登，支援多人連線、單人益智、邏輯推理與數感挑戰。
           </p>
         </motion.div>
-
 
         {announcements.length > 0 && (
           <div className="space-y-2 mb-4">
@@ -259,7 +282,7 @@ function Index() {
             href="/games"
             className="inline-block border-brutal shadow-brutal rounded-2xl px-5 py-3 bg-accent text-accent-foreground font-display font-bold hover:translate-y-0.5 hover:shadow-none transition"
           >
-            🎮 進入小遊戲大廳（10 款連線遊戲）
+            🎮 進入免費小遊戲大廳（多人連線與益智遊戲）
           </a>
         </div>
 
@@ -268,7 +291,7 @@ function Index() {
             href="/arcade"
             className="border-brutal shadow-brutal-sm rounded-xl px-4 py-2 bg-card font-bold hover:translate-y-0.5 hover:shadow-none transition"
           >
-            🕹️ 單人街機 + AI 對戰
+            🕹️ 單人街機與 AI 對戰
           </a>
           <a
             href="/shop"
@@ -285,6 +308,20 @@ function Index() {
             </a>
           )}
         </div>
+
+        <section className="mt-10 rounded-3xl border-brutal bg-card p-6 shadow-brutal-sm">
+          <h2 className="text-2xl font-black tracking-tight">免費線上小遊戲怎麼玩？</h2>
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+            畫聊 Doodle 是以瀏覽器為主的免費小遊戲平台。你可以直接建立房間，分享房間代碼和朋友一起玩線上多人遊戲，也可以前往遊戲大廳挑選單人與益智遊戲。遊戲類型涵蓋繪圖猜題、棋盤遊戲、數學數感、邏輯推理與反應挑戰，不需要下載安裝程式。
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
+            <a href="/games" className="rounded-full bg-muted px-3 py-1.5 hover:bg-accent">免費小遊戲</a>
+            <a href="/games" className="rounded-full bg-muted px-3 py-1.5 hover:bg-accent">線上多人遊戲</a>
+            <a href="/games" className="rounded-full bg-muted px-3 py-1.5 hover:bg-accent">益智遊戲</a>
+            <a href="/games" className="rounded-full bg-muted px-3 py-1.5 hover:bg-accent">棋盤遊戲</a>
+            <a href="/arcade" className="rounded-full bg-muted px-3 py-1.5 hover:bg-accent">單人街機</a>
+          </div>
+        </section>
 
         {isAdmin && (
           <div className="mt-3 flex gap-2 justify-center flex-wrap">
