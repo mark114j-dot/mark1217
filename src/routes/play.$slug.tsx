@@ -96,16 +96,19 @@ function PlayGame() {
   const [owned, setOwned] = useState<OwnedEmote[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [effects, setEffects] = useState<BroadcastEvent[]>([]);
+  const [progressState, setProgressState] = useState<"idle" | "loading" | "saved">("idle");
   const seenRef = useRef<Set<string>>(new Set());
   const fullscreen = useFullscreen<HTMLDivElement>();
 
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const progressCleanupRef = useRef<(() => void) | null>(null);
   const [netPlayers, setNetPlayers] = useState<NetPlayer[]>([]);
   const [netStatus, setNetStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
   const roomCode = useMemo(() => search.room ?? randomRoomCode(), [search.room]);
   const isOffline = !!game?.offline_ok;
+
   useEffect(() => {
     if (isOffline) return;
     if (!search.room) navigate({ search: { room: roomCode }, replace: true });
@@ -161,22 +164,27 @@ function PlayGame() {
   }, [slug]);
 
   useEffect(() => {
-    if (!slug || !game) return;
     const iframe = iframeRef.current;
-    if (!iframe) return;
-    return installGameProgressBridge(iframe, slug);
+    if (!slug || !game || !iframe) return;
+    progressCleanupRef.current?.();
+    progressCleanupRef.current = installGameProgressBridge(iframe, slug, () => setProgressState("saved"));
+    setProgressState("idle");
+    return () => {
+      progressCleanupRef.current?.();
+      progressCleanupRef.current = null;
+    };
   }, [slug, game?.id]);
 
   function loadSavedProgress() {
     const iframe = iframeRef.current;
     if (!iframe) return;
+    if (!progressCleanupRef.current) {
+      progressCleanupRef.current = installGameProgressBridge(iframe, slug, () => setProgressState("saved"));
+    }
+    setProgressState("loading");
     requestGameLoad(iframe, slug);
+    window.setTimeout(() => setProgressState((current) => current === "loading" ? "idle" : current), 900);
   }
-
-  useEffect(() => {
-    if (isOffline) return;
-    if (!search.room) navigate({ search: { room: roomCode }, replace: true });
-  }, [search.room, roomCode, isOffline]);
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
@@ -313,7 +321,7 @@ function PlayGame() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-foreground/15 px-4 py-2 flex items-center gap-3 bg-card">
+      <header className="border-b border-foreground/15 px-4 py-2 flex items-center gap-2 bg-card">
         <Link to="/games" className="border-brutal shadow-brutal-sm rounded-lg p-1.5 hover:translate-y-0.5 hover:shadow-none transition">
           <ArrowLeft className="w-4 h-4" />
         </Link>
@@ -322,6 +330,9 @@ function PlayGame() {
           <div className="font-display font-bold truncate">{game.name}</div>
           <div className="text-xs text-muted-foreground truncate">{game.description}</div>
         </div>
+        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground" title="遊戲進度會儲存在這台裝置">
+          {progressState === "saved" ? "✓ 已保存" : progressState === "loading" ? "↻ 讀取進度" : "自動保存"}
+        </span>
         {!game.offline_ok && (
           <button
             onClick={() => {
@@ -382,18 +393,18 @@ function PlayGame() {
         )}
       </div>
       )}
-      <div ref={fullscreen.ref} className="flex-1 relative bg-black mobile-game-frame fullscreen-game-target">
-        <FullscreenButton active={fullscreen.active} onClick={fullscreen.toggle} className="absolute right-2 top-2" />
+      <div ref={fullscreen.ref} className="flex-1 relative bg-black mobile-game-frame fullscreen-game-target overscroll-contain">
+        <FullscreenButton active={fullscreen.active} onClick={fullscreen.toggle} className="absolute right-2 top-2 z-10" />
         {game.play_url ? (
           <iframe
             ref={iframeRef}
             src={game.play_url}
             title={game.name}
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full border-0"
             sandbox="allow-scripts allow-pointer-lock"
             referrerPolicy="no-referrer"
             allow="autoplay; fullscreen; gamepad"
-            loading="lazy"
+            loading="eager"
             onLoad={loadSavedProgress}
           />
         ) : game.html_content ? (
@@ -401,11 +412,11 @@ function PlayGame() {
             ref={iframeRef}
             srcDoc={game.html_content}
             title={game.name}
-            className="absolute inset-0 w-full h-full bg-white"
+            className="absolute inset-0 w-full h-full bg-white border-0"
             sandbox="allow-scripts allow-pointer-lock"
             referrerPolicy="no-referrer"
             allow="autoplay; fullscreen; gamepad"
-            loading="lazy"
+            loading="eager"
             onLoad={loadSavedProgress}
           />
         ) : (
@@ -432,7 +443,7 @@ function PlayGame() {
           </div>
         ))}
         {pickerOpen && (
-          <div className="absolute right-2 top-2 z-20 bg-card border-brutal shadow-brutal rounded-xl p-2 max-w-[260px] max-h-[70vh] overflow-auto">
+          <div className="absolute right-2 top-12 z-20 bg-card border-brutal shadow-brutal rounded-xl p-2 max-w-[260px] max-h-[70vh] overflow-auto">
             <div className="text-xs font-bold mb-1">選一個表情送出</div>
             <div className="grid grid-cols-3 gap-1">
               {owned.map((e) => e.shop_emotes && (
