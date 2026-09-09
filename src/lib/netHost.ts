@@ -76,8 +76,10 @@ export function createNetHost(opts: NetHostOptions) {
   async function persistState() {
     const isHost = players[0]?.id === me.id;
     if (!isHost) return;
+    const { data: authData } = await supabase.auth.getUser();
+    const hostUserId = authData.user?.id ?? null;
     await supabase.from("mini_rooms").upsert(
-      { code: roomCode, game_type: gameType, state: state as any, players: players as any, host_client_id: me.id },
+      { code: roomCode, game_type: gameType, state: state as any, players: players as any, host_client_id: me.id, host_user_id: hostUserId },
       { onConflict: "code" },
     );
   }
