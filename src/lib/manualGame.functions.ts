@@ -19,19 +19,9 @@ function slugify(value: string) {
     .slice(0, 50);
 }
 
-export type ManualGameInput = {
+type ManualGameInput = {
   name: string;
-  slug: string;
-  emoji: string;
-  description: string;
-  category: string;
-  cover_image_url: string;
-  instructions: string;
   html_content: string;
-  play_url: string;
-  offline_ok: boolean;
-  min_players: number;
-  max_players: number;
 };
 
 export const createManualGame = createServerFn({ method: "POST" })
@@ -41,48 +31,43 @@ export const createManualGame = createServerFn({ method: "POST" })
     if (!(await isAdmin(context))) throw new Error("需要管理員權限");
 
     const name = data.name.trim();
-    const slug = slugify(data.slug || name);
     const html = data.html_content.trim();
-    const playUrl = data.play_url.trim();
-
     if (!name) throw new Error("請輸入遊戲名稱");
-    if (!slug) throw new Error("請輸入有效的網址代稱");
-    if (!html && !playUrl) throw new Error("請填寫 HTML 遊戲程式或遊戲網址其中一項");
-    if (html.length > 500_000) throw new Error("HTML 遊戲程式不能超過 500 KB");
-    if (data.min_players < 1 || data.max_players < data.min_players) {
-      throw new Error("玩家人數設定不正確");
-    }
+    if (!html) throw new Error("請貼上遊戲程式碼");
+    if (html.length > 500_000) throw new Error("遊戲程式碼不能超過 500 KB");
 
-    const { data: existing, error: existingError } = await context.supabase
-      .from("games")
-      .select("id")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (existingError) throw new Error(existingError.message);
-    if (existing) throw new Error(`網址代稱「${slug}」已經存在，請換一個`);
+    const baseSlug = slugify(name) || `game-${Date.now()}`;
+    let slug = baseSlug;
+    for (let i = 2; i <= 100; i += 1) {
+      const { data: existing, error } = await context.supabase
+        .from("games")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!existing) break;
+      slug = `${baseSlug}-${i}`.slice(0, 60);
+      if (i === 100) throw new Error("遊戲網址代稱已經太多重複，請換一個遊戲名稱");
+    }
 
     const { data: game, error } = await context.supabase
       .from("games")
       .insert({
         slug,
         name,
-        emoji: data.emoji.trim() || "🎮",
-        description: data.description.trim(),
-        category: data.category.trim() || "misc",
+        emoji: "🎮",
+        description: "管理員手動發布的遊戲",
+        category: "misc",
         primitive: "custom",
-        spec: {
-          source: "manual",
-          min_players: data.min_players,
-          max_players: data.max_players,
-        },
-        min_players: data.min_players,
-        max_players: data.max_players,
-        html_content: html || null,
-        play_url: playUrl || null,
-        cover_image_url: data.cover_image_url.trim() || null,
-        instructions: data.instructions.trim() || null,
-        offline_ok: !!data.offline_ok,
-        status: "draft",
+        spec: { source: "manual" },
+        min_players: 1,
+        max_players: 1,
+        html_content: html,
+        play_url: null,
+        cover_image_url: null,
+        instructions: null,
+        offline_ok: false,
+        status: "published",
         version: 1,
         created_by: context.userId,
       })
