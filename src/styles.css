@@ -6,7 +6,7 @@
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px); --radius-2xl: calc(var(--radius) + 8px); --radius-3xl: calc(var(--radius) + 12px); --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground); --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring); --color-ring-offset-background: var(--background); --color-chart-1: var(--chart-1); --color-chart-2: var(--chart-2); --color-chart-3: var(--chart-3); --color-chart-4: var(--chart-4); --color-chart-5: var(--chart-5); --color-sidebar: var(--sidebar); --color-sidebar-foreground: var(--sidebar-foreground); --color-sidebar-primary: var(--sidebar-primary); --color-sidebar-primary-foreground: var(--sidebar-primary-foreground); --color-sidebar-accent: var(--sidebar-accent); --color-sidebar-accent-foreground: var(--sidebar-accent-foreground); --color-sidebar-border: var(--sidebar-border); --color-sidebar-ring: var(--ring);
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground); --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring); --color-ring-offset-background: var(--background); --color-chart-1: var(--chart-1); --color-chart-2: var(--chart-2); --color-chart-3: var(--chart-3); --color-chart-4: var(--chart-4); --color-chart-5: var(--chart-5); --color-sidebar: var(--sidebar); --color-sidebar-foreground: var(--sidebar-foreground); --color-sidebar-primary: var(--sidebar-primary); --color-sidebar-primary-foreground: var(--sidebar-primary-foreground); --color-sidebar-accent: var(--sidebar-accent); --color-sidebar-border: var(--sidebar-border); --color-sidebar-ring: var(--ring);
   --font-display: "Quicksand", "Noto Sans TC", system-ui, sans-serif; --font-body: "Noto Sans TC", "Quicksand", system-ui, sans-serif; --font-hand: "Caveat", cursive;
 }
 
@@ -32,55 +32,35 @@
   .mobile-safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); } .mobile-safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
 }
 
-/* Game loading screen: gives the game iframe a polished loading moment while it starts. */
-.fullscreen-game-target::before {
-  content: "";
-  position: absolute;
+.site-loading-screen {
+  position: fixed;
   inset: 0;
-  z-index: 10;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 42%, oklch(0.25 0.04 265), oklch(0.12 0.02 265));
-  animation: game-loading-fade 1.9s ease 0.15s forwards;
-}
-
-.fullscreen-game-target::after {
-  content: "🎮  正在載入遊戲…";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 11;
-  transform: translate(-50%, -50%);
-  padding: 18px 26px;
-  border: 1.5px solid oklch(1 0 0 / 22%);
-  border-radius: 18px;
-  background: oklch(0.18 0.03 265 / 88%);
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 35%, oklch(0.25 0.08 265), oklch(0.10 0.03 265));
   color: white;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(16px, 3vw, 22px);
-  white-space: nowrap;
-  box-shadow: 0 18px 45px oklch(0 0 0 / 35%);
-  animation: game-loading-content 1.9s ease 0.15s forwards;
-  pointer-events: none;
+  animation: site-loading-out 0.45s ease 1.0s forwards;
 }
+.site-loading-content { display: flex; flex-direction: column; align-items: center; text-align: center; animation: site-loading-in 0.65s ease both; }
+.site-loading-logo { width: 92px; height: 92px; object-fit: contain; border-radius: 24px; box-shadow: 0 18px 55px oklch(0 0 0 / 35%); }
+.site-loading-title { margin-top: 18px; font-family: var(--font-display); font-size: clamp(26px, 7vw, 40px); font-weight: 700; letter-spacing: -0.02em; }
+.site-loading-subtitle { margin-top: 7px; font-family: var(--font-body); font-size: 14px; opacity: 0.72; }
+.site-loading-dots { display: flex; gap: 7px; margin-top: 22px; }
+.site-loading-dots span { width: 7px; height: 7px; border-radius: 999px; background: white; opacity: 0.35; animation: site-loading-dot 0.9s ease-in-out infinite; }
+.site-loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+.site-loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes site-loading-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes site-loading-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+@keyframes site-loading-dot { 0%,100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-4px); } }
 
-@keyframes game-loading-fade {
-  0%, 72% { opacity: 1; }
-  100% { opacity: 0; visibility: hidden; }
-}
+/* Game loading screen: gives the game iframe a polished loading moment while it starts. */
+.fullscreen-game-target::before { content: ""; position: absolute; inset: 0; z-index: 10; pointer-events: none; background: radial-gradient(circle at 50% 42%, oklch(0.25 0.04 265), oklch(0.12 0.02 265)); animation: game-loading-fade 1.9s ease 0.15s forwards; }
+.fullscreen-game-target::after { content: "🎮  正在載入遊戲…"; position: absolute; left: 50%; top: 50%; z-index: 11; transform: translate(-50%, -50%); padding: 18px 26px; border: 1.5px solid oklch(1 0 0 / 22%); border-radius: 18px; background: oklch(0.18 0.03 265 / 88%); color: white; font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 3vw, 22px); white-space: nowrap; box-shadow: 0 18px 45px oklch(0 0 0 / 35%); animation: game-loading-content 1.9s ease 0.15s forwards; pointer-events: none; }
+@keyframes game-loading-fade { 0%,72% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes game-loading-content { 0%,68% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); visibility: hidden; } }
 
-@keyframes game-loading-content {
-  0%, 68% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); visibility: hidden; }
-}
-
-@media (max-width: 767px) {
-  body { background-attachment: scroll; }
-  button:not(.icon-button), [role="button"]:not(.icon-button) { min-height: 42px; }
-  input,select,textarea { font-size: 16px; max-width: 100%; }
-  h1,h2,h3,h4,p,pre,code { overflow-wrap: anywhere; }
-  .mobile-game-frame { min-height: 0; height: 100%; height: 100dvh; }
-}
+@media (max-width: 767px) { body { background-attachment: scroll; } button:not(.icon-button), [role="button"]:not(.icon-button) { min-height: 42px; } input,select,textarea { font-size: 16px; max-width: 100%; } h1,h2,h3,h4,p,pre,code { overflow-wrap: anywhere; } .mobile-game-frame { min-height: 0; height: 100%; height: 100dvh; } }
 @media (max-width: 480px) { h1 { line-height: 1.12; } .mobile-page-padding { padding-left: 12px; padding-right: 12px; } }
 @media (orientation: landscape) and (max-height: 600px) { .mobile-landscape-compact { padding-top: 6px; padding-bottom: 6px; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; } }
