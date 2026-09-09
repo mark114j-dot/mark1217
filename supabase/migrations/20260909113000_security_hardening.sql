@@ -25,6 +25,7 @@ CREATE POLICY "player update self"
 -- Server/service-role remains able to manage them.
 
 -- 3) Mini rooms: prevent arbitrary deletion and require the host identity for updates.
+ALTER TABLE public.mini_rooms ADD COLUMN IF NOT EXISTS host_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 DROP POLICY IF EXISTS "public update mini_rooms" ON public.mini_rooms;
 DROP POLICY IF EXISTS "public delete mini_rooms" ON public.mini_rooms;
 DROP POLICY IF EXISTS "public insert mini_rooms" ON public.mini_rooms;
