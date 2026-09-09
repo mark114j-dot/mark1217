@@ -1,9 +1,3 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, cloudflare (build-only),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -15,10 +9,10 @@ export default defineConfig({
     plugins: [
       VitePWA({
         strategies: "injectManifest",
-        srcDir: "public",
+        srcDir: "src",
+        filename: "sw.js",
         registerType: "autoUpdate",
         injectRegister: "script",
-        filename: "sw.js",
         devOptions: { enabled: false },
         manifest: {
           name: "畫聊 Doodle — 多人遊戲平台",
@@ -36,7 +30,7 @@ export default defineConfig({
           ],
         },
         injectManifest: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2,webmanifest}"],
         },
       }),
     ],
