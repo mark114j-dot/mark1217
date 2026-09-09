@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 import { readCachedOfflineGame } from "@/lib/offlineCache";
 import { FullscreenButton, useFullscreen } from "@/components/FullscreenButton";
+import { installGameProgressBridge, requestGameLoad } from "@/lib/gameProgress";
 
 const BASE_URL = "https://mark1217.lovable.app";
 
@@ -98,7 +99,6 @@ function PlayGame() {
   const seenRef = useRef<Set<string>>(new Set());
   const fullscreen = useFullscreen<HTMLDivElement>();
 
-  // ---- Multiplayer room ----
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -159,6 +159,24 @@ function PlayGame() {
       setLoading(false);
     })();
   }, [slug]);
+
+  useEffect(() => {
+    if (!slug || !game) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    return installGameProgressBridge(iframe, slug);
+  }, [slug, game?.id]);
+
+  function loadSavedProgress() {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    requestGameLoad(iframe, slug);
+  }
+
+  useEffect(() => {
+    if (isOffline) return;
+    if (!search.room) navigate({ search: { room: roomCode }, replace: true });
+  }, [search.room, roomCode, isOffline]);
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
@@ -376,6 +394,7 @@ function PlayGame() {
             referrerPolicy="no-referrer"
             allow="autoplay; fullscreen; gamepad"
             loading="lazy"
+            onLoad={loadSavedProgress}
           />
         ) : game.html_content ? (
           <iframe
@@ -387,6 +406,7 @@ function PlayGame() {
             referrerPolicy="no-referrer"
             allow="autoplay; fullscreen; gamepad"
             loading="lazy"
+            onLoad={loadSavedProgress}
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-white">此遊戲尚未上傳內容</div>
