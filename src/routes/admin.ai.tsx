@@ -134,7 +134,13 @@ function AdminAi() {
       <div className="max-w-6xl mx-auto space-y-4">
         <div className="flex items-center gap-2 flex-wrap">
           <Link to="/" className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-card">← 回首頁</Link>
+          <Link to="/admin/manual" className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-primary text-primary-foreground font-bold">🎮 手動新增遊戲</Link>
           <h1 className="font-display text-2xl font-bold">🤖 AI 後台助手</h1>
+        </div>
+
+        <div className="border-brutal shadow-brutal rounded-2xl bg-card p-4">
+          <div className="font-bold">🎮 不用 AI，也可以自己新增遊戲</div>
+          <p className="text-sm text-muted-foreground mt-1">你可以自己輸入遊戲名稱、網址代稱、介紹、分類、封面、HTML 遊戲程式或外部遊戲網址，再建立成草稿。</p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -142,9 +148,7 @@ function AdminAi() {
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
               {msgs.map((m, i) => (
                 <div key={i} className={m.role === "user" ? "text-right" : ""}>
-                  <div className={`inline-block max-w-[85%] text-left rounded-2xl px-3 py-2 whitespace-pre-wrap ${
-                    m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}>{m.content}</div>
+                  <div className={`inline-block max-w-[85%] text-left rounded-2xl px-3 py-2 whitespace-pre-wrap ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>{m.content}</div>
                 </div>
               ))}
 
@@ -156,14 +160,8 @@ function AdminAi() {
                     {pending.ops.map((op, i) => <li key={i}>• {opLabel(op)}</li>)}
                   </ul>
                   <div className="flex gap-2 pt-1">
-                    <button onClick={confirmPending} disabled={busy}
-                      className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-primary text-primary-foreground font-bold">
-                      ✅ 確認套用
-                    </button>
-                    <button onClick={cancelPending} disabled={busy}
-                      className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-card">
-                      ✖ 取消
-                    </button>
+                    <button onClick={confirmPending} disabled={busy} className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-primary text-primary-foreground font-bold">✅ 確認套用</button>
+                    <button onClick={cancelPending} disabled={busy} className="border-brutal shadow-brutal-sm rounded-lg px-3 py-1.5 bg-card">✖ 取消</button>
                   </div>
                 </div>
               )}
@@ -171,18 +169,8 @@ function AdminAi() {
             </div>
 
             <div className="border-t p-3 flex gap-2">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder="想改什麼？例如：把主色換成青綠色"
-                aria-label="輸入給 AI 的指令"
-                className="flex-1 min-w-0 border-brutal rounded-lg px-3 py-2 bg-background"
-              />
-              <button onClick={send} disabled={busy}
-                className="border-brutal shadow-brutal-sm rounded-lg px-4 py-2 bg-primary text-primary-foreground font-bold">
-                送出
-              </button>
+              <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} placeholder="想改什麼？例如：把主色換成青綠色" aria-label="輸入給 AI 的指令" className="flex-1 min-w-0 border-brutal rounded-lg px-3 py-2 bg-background" />
+              <button onClick={send} disabled={busy} className="border-brutal shadow-brutal-sm rounded-lg px-4 py-2 bg-primary text-primary-foreground font-bold">送出</button>
             </div>
           </section>
 
@@ -191,22 +179,12 @@ function AdminAi() {
             {history.length === 0 && <div className="text-sm text-muted-foreground">還沒有任何變更。</div>}
             {history.map((h) => (
               <div key={h.id} className="border-brutal rounded-xl p-3 space-y-2 bg-background">
-                <div className="text-xs text-muted-foreground">
-                  {new Date(h.created_at).toLocaleString("zh-TW")}
-                </div>
+                <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString("zh-TW")}</div>
                 <div className="text-sm font-medium">{h.summary || "（未命名變更）"}</div>
-                <ul className="text-xs text-muted-foreground space-y-0.5">
-                  {(h.ops ?? []).map((op, i) => <li key={i}>• {opLabel(op)}</li>)}
-                </ul>
+                <ul className="text-xs text-muted-foreground space-y-0.5">{(h.ops ?? []).map((op, i) => <li key={i}>• {opLabel(op)}</li>)}</ul>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs rounded-full px-2 py-0.5 bg-muted">
-                    {h.status === "applied" ? "已套用" : h.status === "reverted" ? "已回復"
-                      : h.status === "rejected" ? "已取消" : "待確認"}
-                  </span>
-                  {h.status === "applied" && (
-                    <button onClick={() => doRevert(h.id)} disabled={busy}
-                      className="border-brutal rounded-lg px-2 py-1 text-xs bg-card">↩ 回復此版本</button>
-                  )}
+                  <span className="text-xs rounded-full px-2 py-0.5 bg-muted">{h.status === "applied" ? "已套用" : h.status === "reverted" ? "已回復" : h.status === "rejected" ? "已取消" : "待確認"}</span>
+                  {h.status === "applied" && <button onClick={() => doRevert(h.id)} disabled={busy} className="border-brutal rounded-lg px-2 py-1 text-xs bg-card">↩ 回復此版本</button>}
                 </div>
               </div>
             ))}
