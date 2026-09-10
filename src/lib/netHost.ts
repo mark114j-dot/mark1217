@@ -62,7 +62,6 @@ export function createNetHost(opts: NetHostOptions) {
       if (status === "SUBSCRIBED") {
         opts.onStatus?.("connected");
         await channel.track({ ...me, ready, joinedAt });
-        // Load any persisted room state so late joiners / reconnects catch up.
         const { data } = await supabase
           .from("mini_rooms").select("state").eq("code", roomCode).maybeSingle();
         if (data?.state && typeof data.state === "object") state = data.state as Record<string, unknown>;
@@ -76,10 +75,8 @@ export function createNetHost(opts: NetHostOptions) {
   async function persistState() {
     const isHost = players[0]?.id === me.id;
     if (!isHost) return;
-    const { data: authData } = await supabase.auth.getUser();
-    const hostUserId = authData.user?.id ?? null;
     await supabase.from("mini_rooms").upsert(
-      { code: roomCode, game_type: gameType, state: state as any, players: players as any, host_client_id: me.id, host_user_id: hostUserId },
+      { code: roomCode, game_type: gameType, state: state as any, players: players as any, host_client_id: me.id },
       { onConflict: "code" },
     );
   }
@@ -92,7 +89,7 @@ export function createNetHost(opts: NetHostOptions) {
       post("init", { me: me.id, players, state });
     } else if (m.type === "event") {
       channel.send({ type: "broadcast", event: "evt", payload: m.payload });
-      post("event", m.payload); // echo locally
+      post("event", m.payload);
     } else if (m.type === "state") {
       state = m.payload ?? {};
       channel.send({ type: "broadcast", event: "state", payload: state });
