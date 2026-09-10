@@ -41,7 +41,7 @@ export const createManualGame = createServerFn({ method: "POST" })
     const html = data.html_content.trim();
     if (!name) throw new Error("請輸入遊戲名稱");
     if (!html) throw new Error("請貼上遊戲程式碼");
-    if (html.length > 500_000) throw new Error("遊戲程式碼不能超過 500 KB");
+    if (html.length > 10_000_000) throw new Error("遊戲程式碼不能超過 10,000 KB");
 
     // 3️⃣ 生成遊戲網址 slug（自動避免重複）
     const baseSlug = slugify(name) || `game-${Date.now()}`;
