@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "soner";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { checkAdmin } from "@/lib/studio.functions";
 import { createManualGame } from "@/lib/manualGame.functions";
