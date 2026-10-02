@@ -9,71 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ArcadeRouteImport } from './routes/arcade'
-import { Route as CreateGameRouteImport } from './routes/create-game'
-import { Route as FriendsRouteImport } from './routes/friends'
-import { Route as GamesRouteImport } from './routes/games'
-import { Route as InviteRouteImport } from './routes/invite'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as MyGamesRouteImport } from './routes/my-games'
-import { Route as PromoteGameRouteImport } from './routes/promote-game'
-import { Route as ShopRouteImport } from './routes/shop'
 import { Route as StudioRouteImport } from './routes/studio'
-import { Route as AdminAiRouteImport } from './routes/admin.ai'
-import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
-import { Route as AdminEmotesRouteImport } from './routes/admin.emotes'
-import { Route as AdminManualRouteImport } from './routes/admin.manual'
-import { Route as GameEditorGameIdRouteImport } from './routes/game-editor.$gameId'
-import { Route as GameInviteTokenRouteImport } from './routes/game-invite.$token'
-import { Route as GamesSeniorRouteImport } from './routes/games.senior'
-import { Route as PlaySlugRouteImport } from './routes/play.$slug'
+import { Route as ShopRouteImport } from './routes/shop'
+import { Route as PromoteGameRouteImport } from './routes/promote-game'
+import { Route as MyGamesRouteImport } from './routes/my-games'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as InviteRouteImport } from './routes/invite'
+import { Route as GamesRouteImport } from './routes/games'
+import { Route as FriendsRouteImport } from './routes/friends'
+import { Route as CreateGameRouteImport } from './routes/create-game'
+import { Route as ArcadeRouteImport } from './routes/arcade'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
+import { Route as PlaySlugRouteImport } from './routes/play.$slug'
+import { Route as GamesSeniorRouteImport } from './routes/games.senior'
+import { Route as GameInviteTokenRouteImport } from './routes/game-invite.$token'
+import { Route as GameEditorGameIdRouteImport } from './routes/game-editor.$gameId'
+import { Route as AdminManualRouteImport } from './routes/admin.manual'
+import { Route as AdminEmotesRouteImport } from './routes/admin.emotes'
+import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
+import { Route as AdminAiRouteImport } from './routes/admin.ai'
 import { Route as MiniTypeCodeRouteImport } from './routes/mini.$type.$code'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ArcadeRoute = ArcadeRouteImport.update({
-  id: '/arcade',
-  path: '/arcade',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CreateGameRoute = CreateGameRouteImport.update({
-  id: '/create-game',
-  path: '/create-game',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FriendsRoute = FriendsRouteImport.update({
-  id: '/friends',
-  path: '/friends',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GamesRoute = GamesRouteImport.update({
-  id: '/games',
-  path: '/games',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InviteRoute = InviteRouteImport.update({
-  id: '/invite',
-  path: '/invite',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MyGamesRoute = MyGamesRouteImport.update({
-  id: '/my-games',
-  path: '/my-games',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PromoteGameRoute = PromoteGameRouteImport.update({
-  id: '/promote-game',
-  path: '/promote-game',
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -81,39 +41,59 @@ const ShopRoute = ShopRouteImport.update({
   path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StudioRoute = StudioRouteImport.update({
-  id: '/studio',
-  path: '/studio',
+const PromoteGameRoute = PromoteGameRouteImport.update({
+  id: '/promote-game',
+  path: '/promote-game',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAiRoute = AdminAiRouteImport.update({
-  id: '/admin/ai',
-  path: '/admin/ai',
+const MyGamesRoute = MyGamesRouteImport.update({
+  id: '/my-games',
+  path: '/my-games',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
-  id: '/admin/announcements',
-  path: '/admin/announcements',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminEmotesRoute = AdminEmotesRouteImport.update({
-  id: '/admin/emotes',
-  path: '/admin/emotes',
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminManualRoute = AdminManualRouteImport.update({
-  id: '/admin/manual',
-  path: '/admin/manual',
+const GamesRoute = GamesRouteImport.update({
+  id: '/games',
+  path: '/games',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GameEditorGameIdRoute = GameEditorGameIdRouteImport.update({
-  id: '/game-editor/$gameId',
-  path: '/game-editor/$gameId',
+const FriendsRoute = FriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GameInviteTokenRoute = GameInviteTokenRouteImport.update({
-  id: '/game-invite/$token',
-  path: '/game-invite/$token',
+const CreateGameRoute = CreateGameRouteImport.update({
+  id: '/create-game',
+  path: '/create-game',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArcadeRoute = ArcadeRouteImport.update({
+  id: '/arcade',
+  path: '/arcade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomCodeRoute = RoomCodeRouteImport.update({
+  id: '/room/$code',
+  path: '/room/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaySlugRoute = PlaySlugRouteImport.update({
+  id: '/play/$slug',
+  path: '/play/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesSeniorRoute = GamesSeniorRouteImport.update({
@@ -121,14 +101,34 @@ const GamesSeniorRoute = GamesSeniorRouteImport.update({
   path: '/senior',
   getParentRoute: () => GamesRoute,
 } as any)
-const PlaySlugRoute = PlaySlugRouteImport.update({
-  id: '/play/$slug',
-  path: '/play/$slug',
+const GameInviteTokenRoute = GameInviteTokenRouteImport.update({
+  id: '/game-invite/$token',
+  path: '/game-invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RoomCodeRoute = RoomCodeRouteImport.update({
-  id: '/room/$code',
-  path: '/room/$code',
+const GameEditorGameIdRoute = GameEditorGameIdRouteImport.update({
+  id: '/game-editor/$gameId',
+  path: '/game-editor/$gameId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminManualRoute = AdminManualRouteImport.update({
+  id: '/admin/manual',
+  path: '/admin/manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEmotesRoute = AdminEmotesRouteImport.update({
+  id: '/admin/emotes',
+  path: '/admin/emotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
+  id: '/admin/announcements',
+  path: '/admin/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAiRoute = AdminAiRouteImport.update({
+  id: '/admin/ai',
+  path: '/admin/ai',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MiniTypeCodeRoute = MiniTypeCodeRouteImport.update({
@@ -304,67 +304,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/arcade': {
-      id: '/arcade'
-      path: '/arcade'
-      fullPath: '/arcade'
-      preLoaderRoute: typeof ArcadeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create-game': {
-      id: '/create-game'
-      path: '/create-game'
-      fullPath: '/create-game'
-      preLoaderRoute: typeof CreateGameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/friends': {
-      id: '/friends'
-      path: '/friends'
-      fullPath: '/friends'
-      preLoaderRoute: typeof FriendsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/games': {
-      id: '/games'
-      path: '/games'
-      fullPath: '/games'
-      preLoaderRoute: typeof GamesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invite': {
-      id: '/invite'
-      path: '/invite'
-      fullPath: '/invite'
-      preLoaderRoute: typeof InviteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/my-games': {
-      id: '/my-games'
-      path: '/my-games'
-      fullPath: '/my-games'
-      preLoaderRoute: typeof MyGamesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/promote-game': {
-      id: '/promote-game'
-      path: '/promote-game'
-      fullPath: '/promote-game'
-      preLoaderRoute: typeof PromoteGameRouteImport
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -374,53 +318,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/studio': {
-      id: '/studio'
-      path: '/studio'
-      fullPath: '/studio'
-      preLoaderRoute: typeof StudioRouteImport
+    '/promote-game': {
+      id: '/promote-game'
+      path: '/promote-game'
+      fullPath: '/promote-game'
+      preLoaderRoute: typeof PromoteGameRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/ai': {
-      id: '/admin/ai'
-      path: '/admin/ai'
-      fullPath: '/admin/ai'
-      preLoaderRoute: typeof AdminAiRouteImport
+    '/my-games': {
+      id: '/my-games'
+      path: '/my-games'
+      fullPath: '/my-games'
+      preLoaderRoute: typeof MyGamesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/announcements': {
-      id: '/admin/announcements'
-      path: '/admin/announcements'
-      fullPath: '/admin/announcements'
-      preLoaderRoute: typeof AdminAnnouncementsRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/emotes': {
-      id: '/admin/emotes'
-      path: '/admin/emotes'
-      fullPath: '/admin/emotes'
-      preLoaderRoute: typeof AdminEmotesRouteImport
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/manual': {
-      id: '/admin/manual'
-      path: '/admin/manual'
-      fullPath: '/admin/manual'
-      preLoaderRoute: typeof AdminManualRouteImport
+    '/games': {
+      id: '/games'
+      path: '/games'
+      fullPath: '/games'
+      preLoaderRoute: typeof GamesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/game-editor/$gameId': {
-      id: '/game-editor/$gameId'
-      path: '/game-editor/$gameId'
-      fullPath: '/game-editor/$gameId'
-      preLoaderRoute: typeof GameEditorGameIdRouteImport
+    '/friends': {
+      id: '/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof FriendsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/game-invite/$token': {
-      id: '/game-invite/$token'
-      path: '/game-invite/$token'
-      fullPath: '/game-invite/$token'
-      preLoaderRoute: typeof GameInviteTokenRouteImport
+    '/create-game': {
+      id: '/create-game'
+      path: '/create-game'
+      fullPath: '/create-game'
+      preLoaderRoute: typeof CreateGameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/arcade': {
+      id: '/arcade'
+      path: '/arcade'
+      fullPath: '/arcade'
+      preLoaderRoute: typeof ArcadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/room/$code': {
+      id: '/room/$code'
+      path: '/room/$code'
+      fullPath: '/room/$code'
+      preLoaderRoute: typeof RoomCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/$slug': {
+      id: '/play/$slug'
+      path: '/play/$slug'
+      fullPath: '/play/$slug'
+      preLoaderRoute: typeof PlaySlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games/senior': {
@@ -430,18 +402,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesSeniorRouteImport
       parentRoute: typeof GamesRoute
     }
-    '/play/$slug': {
-      id: '/play/$slug'
-      path: '/play/$slug'
-      fullPath: '/play/$slug'
-      preLoaderRoute: typeof PlaySlugRouteImport
+    '/game-invite/$token': {
+      id: '/game-invite/$token'
+      path: '/game-invite/$token'
+      fullPath: '/game-invite/$token'
+      preLoaderRoute: typeof GameInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/room/$code': {
-      id: '/room/$code'
-      path: '/room/$code'
-      fullPath: '/room/$code'
-      preLoaderRoute: typeof RoomCodeRouteImport
+    '/game-editor/$gameId': {
+      id: '/game-editor/$gameId'
+      path: '/game-editor/$gameId'
+      fullPath: '/game-editor/$gameId'
+      preLoaderRoute: typeof GameEditorGameIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/manual': {
+      id: '/admin/manual'
+      path: '/admin/manual'
+      fullPath: '/admin/manual'
+      preLoaderRoute: typeof AdminManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/emotes': {
+      id: '/admin/emotes'
+      path: '/admin/emotes'
+      fullPath: '/admin/emotes'
+      preLoaderRoute: typeof AdminEmotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/announcements': {
+      id: '/admin/announcements'
+      path: '/admin/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AdminAnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/ai': {
+      id: '/admin/ai'
+      path: '/admin/ai'
+      fullPath: '/admin/ai'
+      preLoaderRoute: typeof AdminAiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mini/$type/$code': {
