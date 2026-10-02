@@ -258,54 +258,6 @@ export type Database = {
           },
         ]
       }
-      game_scores: {
-        Row: {
-          avatar: string
-          created_at: string
-          duration_ms: number | null
-          game_id: string
-          id: string
-          score: number
-          user_id: string
-          username: string
-        }
-        Insert: {
-          avatar?: string
-          created_at?: string
-          duration_ms?: number | null
-          game_id: string
-          id?: string
-          score: number
-          user_id: string
-          username: string
-        }
-        Update: {
-          avatar?: string
-          created_at?: string
-          duration_ms?: number | null
-          game_id?: string
-          id?: string
-          score?: number
-          user_id?: string
-          username?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_scores_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_scores_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       games: {
         Row: {
           category: string
