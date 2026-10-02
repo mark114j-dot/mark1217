@@ -14,6 +14,87 @@ import { toast } from "sonner";
 
 const BASE_URL = "https://mark1217.lovable.app";
 
+
+/** 自動讀取嵌入遊戲的儲存分數，無需遊戲另外撰寫 postMessage。 */
+function injectScoreStorageBridge(html: string) {
+  const bridge = String.raw\`<script>
+(function () {
+  if (window.__MARK_SCORE_BRIDGE__) return;
+  window.__MARK_SCORE_BRIDGE__ = true;
+  var last = null;
+  var started = Date.now();
+  var keyRe = /(score|highscore|high_score|bestscore|best_score|points|point|分數|最高分|得分)/i;
+
+  function emit(value, key) {
+    var n = Number(value);
+    if (!Number.isFinite(n) || n < 0 || n > 1000000000) return;
+    n = Math.floor(n);
+    if (last === n) return;
+    last = n;
+    try {
+      parent.postMessage({
+        type: "game-score",
+        score: n,
+        playId: "storage:" + key + ":" + n,
+        durationMs: Math.max(0, Date.now() - started),
+        source: "game-storage"
+      }, "*");
+    } catch (_) {}
+  }
+
+  function inspectValue(key, value) {
+    if (!keyRe.test(String(key))) return;
+    if (value == null) return;
+    if (typeof value === "string") {
+      var direct = Number(value);
+      if (Number.isFinite(direct)) { emit(direct, key); return; }
+      try { inspectObject(key, JSON.parse(value)); } catch (_) {}
+      return;
+    }
+    inspectObject(key, value);
+  }
+
+  function inspectObject(rootKey, obj) {
+    if (obj == null || typeof obj !== "object") return;
+    var fields = ["score","highScore","high_score","bestScore","best_score","points","point","分數","最高分","得分"];
+    for (var i = 0; i < fields.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(obj, fields[i])) {
+        emit(obj[fields[i]], rootKey + "." + fields[i]);
+      }
+    }
+  }
+
+  function scan() {
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key == null) continue;
+        inspectValue(key, localStorage.getItem(key));
+      }
+    } catch (_) {}
+  }
+
+  var originalSet = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (key, value) {
+    originalSet.apply(this, arguments);
+    try { inspectValue(key, value); } catch (_) {}
+  };
+
+  var originalRemove = Storage.prototype.removeItem;
+  Storage.prototype.removeItem = function (key) {
+    originalRemove.apply(this, arguments);
+    if (keyRe.test(String(key))) setTimeout(scan, 20);
+  };
+
+  setInterval(scan, 200);
+  setTimeout(scan, 50);
+})();
+<\/script>\`;
+  if (/<\\/head\\s*>/i.test(html)) return html.replace(/<\\/head\\s*>/i, bridge + "</head>");
+  if (/<body[^>]*>/i.test(html)) return html.replace(/<body([^>]*)>/i, "<body$1>" + bridge);
+  return bridge + html;
+}
+
 function cleanSlug(slug: string) {
   return decodeURIComponent(slug).replace(/[-_]+/g, " ").trim();
 }
