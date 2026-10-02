@@ -9,6 +9,8 @@ import { createNetHost, randomRoomCode, type NetPlayer } from "@/lib/netHost";
 import { readCachedOfflineGame } from "@/lib/offlineCache";
 import { FullscreenButton, useFullscreen } from "@/components/FullscreenButton";
 import { installGameProgressBridge, requestGameLoad } from "@/lib/gameProgress";
+import { GameLeaderboard } from "@/components/GameLeaderboard";
+import { toast } from "sonner";
 
 const BASE_URL = "https://mark1217.lovable.app";
 
@@ -87,7 +89,7 @@ type BroadcastEvent = {
 
 function PlayGame() {
   const { slug } = Route.useParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -97,6 +99,9 @@ function PlayGame() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [effects, setEffects] = useState<BroadcastEvent[]>([]);
   const [progressState, setProgressState] = useState<"idle" | "loading" | "saved">("idle");
+  const [currentScore, setCurrentScore] = useState<number | null>(null);
+  const scoreStartedAtRef = useRef<number>(Date.now());
+  const lastScoreMessageRef = useRef<string>("");
   const seenRef = useRef<Set<string>>(new Set());
   const fullscreen = useFullscreen<HTMLDivElement>();
 
@@ -162,6 +167,51 @@ function PlayGame() {
       setLoading(false);
     })();
   }, [slug]);
+
+  useEffect(() => {
+    scoreStartedAtRef.current = Date.now();
+    setCurrentScore(null);
+  }, [game?.id, slug]);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      const data = event.data;
+      if (!data || (data.type !== "game-score" && data.type !== "game:score")) return;
+      const score = Number(data.score);
+      if (!Number.isFinite(score) || score < 0 || score > 1_000_000_000) return;
+      const cleanScore = Math.floor(score);
+      const messageKey = `${cleanScore}:${String(data.playId ?? "")}`;
+      if (messageKey === lastScoreMessageRef.current) return;
+      lastScoreMessageRef.current = messageKey;
+      setCurrentScore(cleanScore);
+
+      if (!user) {
+        toast.info("這局分數已記錄，登入後才能進入排行榜");
+        return;
+      }
+
+      const username = (profile?.username || (user.user_metadata?.username as string) || nickname || "玩家").slice(0, 24);
+      const avatar = (profile?.avatar || (user.user_metadata?.avatar as string) || "🎮").slice(0, 8);
+      const durationMs = Number.isFinite(Number(data.durationMs))
+        ? Math.max(0, Math.min(86_400_000, Math.floor(Number(data.durationMs))))
+        : Math.max(0, Math.min(86_400_000, Date.now() - scoreStartedAtRef.current));
+
+      supabase.from("game_scores").insert({
+        game_id: game?.id,
+        user_id: user.id,
+        username,
+        avatar,
+        score: cleanScore,
+        duration_ms: durationMs,
+      }).then(({ error }) => {
+        if (error) toast.error("排行榜提交失敗");
+        else toast.success(`已提交 ${cleanScore.toLocaleString()} 分`);
+      });
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [game?.id, nickname, profile?.avatar, profile?.username, user]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -456,9 +506,16 @@ function PlayGame() {
           </div>
         )}
       </div>
+      <GameLeaderboard
+        gameId={game.id}
+        gameName={game.name}
+        userId={user?.id}
+        currentScore={currentScore}
+      />
       {game.instructions && (
         <div className="border-t border-foreground/15 px-4 py-2 text-xs text-muted-foreground bg-card">
           <span className="font-bold text-foreground">說明：</span> {game.instructions}
+          <div className="mt-1 text-[11px]">遊戲結束時送出分數即可上榜；此排行榜只屬於這一款遊戲。</div>
         </div>
       )}
     </main>
