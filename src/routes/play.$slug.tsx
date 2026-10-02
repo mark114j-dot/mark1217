@@ -18,7 +18,7 @@ function cleanSlug(slug: string) {
 
 export const Route = createFileRoute("/play/$slug")({
   component: PlayGame,
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { room?: string } => ({
     room: typeof s.room === "string" && s.room ? s.room.toUpperCase().slice(0, 8) : undefined,
   }),
   head: ({ params }) => {
