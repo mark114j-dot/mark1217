@@ -12,6 +12,81 @@ import { installGameProgressBridge, requestGameLoad } from "@/lib/gameProgress";
 import { GameLeaderboard } from "@/components/GameLeaderboard";
 import { toast } from "sonner";
 
+
+function injectScoreReporter(html: string) {
+  const bridge = \`<script>
+(() => {
+  try {
+    const parentWindow = window.parent;
+    let lastSent = -1;
+    let lastText = "";
+
+    const send = (value) => {
+      try {
+        const n = Math.floor(Number(value));
+        if (!Number.isFinite(n) || n < 0 || n > 1000000000 || n === lastSent) return;
+        lastSent = n;
+        parentWindow.postMessage({ type: "game-score", score: n, playId: "auto-" + n }, "*");
+      } catch (_) {}
+    };
+
+    const findScore = () => {
+      try {
+        const candidates = [
+          window.score, window.gameScore, window.currentScore,
+          window.finalScore, window.highScore, window.points
+        ];
+        for (const value of candidates) {
+          if (typeof value === "number" && Number.isFinite(value)) {
+            send(value);
+            return;
+          }
+        }
+
+        const text = document.body ? document.body.innerText.slice(0, 20000) : "";
+        if (!text || text === lastText) return;
+        lastText = text;
+
+        const patterns = [
+          /(?:目前)?(?:分數|得分|總分|最高分|score|points)\\s*[:：=]?\\s*([0-9][0-9,]*)/i,
+          /([0-9][0-9,]*)\\s*(?:分|points|score)/i
+        ];
+
+        for (const re of patterns) {
+          const m = text.match(re);
+          if (m) {
+            const n = Number(String(m[1]).replace(/,/g, ""));
+            if (Number.isFinite(n)) {
+              send(n);
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+    };
+
+    window.addEventListener("game-score", (event) => {
+      try { send(event.detail?.score ?? event.detail); } catch (_) {}
+    });
+
+    window.addEventListener("message", (event) => {
+      try {
+        const data = event.data;
+        if (!data || typeof data !== "object") return;
+        if (data.type === "DOODLE_GAME_SCORE" || data.type === "GAME_SCORE") send(data.score);
+      } catch (_) {}
+    });
+
+    findScore();
+    setInterval(findScore, 700);
+  } catch (_) {}
+})();
+<\\/script>\`;
+
+  if (/<\\/body\\s*>/i.test(html)) return html.replace(/<\\/body\\s*>/i, bridge + "</body>");
+  return html + bridge;
+}
+
 const BASE_URL = "https://mark1217.lovable.app";
 
 function cleanSlug(slug: string) {
@@ -460,7 +535,7 @@ function PlayGame() {
         ) : game.html_content ? (
           <iframe
             ref={iframeRef}
-            srcDoc={game.html_content}
+            srcDoc={injectScoreReporter(game.html_content)}
             title={game.name}
             className="absolute inset-0 w-full h-full bg-white border-0"
             sandbox="allow-scripts allow-pointer-lock"
