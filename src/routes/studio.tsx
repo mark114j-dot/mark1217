@@ -661,7 +661,7 @@ function StudioWorkspace({ userId, isAdmin }: { userId: string; isAdmin: boolean
                           setIconUploading(true);
                           try {
                             const ext = (file.name.split(".").pop() || "png").toLowerCase();
-                            const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                            const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
                             const { error: upErr } = await supabase.storage
                               .from("game-icons").upload(path, file, { contentType: file.type, upsert: false });
                             if (upErr) throw upErr;
