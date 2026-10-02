@@ -17,7 +17,7 @@ const BASE_URL = "https://mark1217.lovable.app";
 
 /** 自動讀取嵌入遊戲的儲存分數，無需遊戲另外撰寫 postMessage。 */
 function injectScoreStorageBridge(html: string) {
-  const bridge = String.raw\`<script>
+  const bridge = String.raw`<script>
 (function () {
   if (window.__MARK_SCORE_BRIDGE__) return;
   window.__MARK_SCORE_BRIDGE__ = true;
@@ -93,7 +93,7 @@ function injectScoreStorageBridge(html: string) {
   setInterval(scan, 200);
   setTimeout(scan, 50);
 })();
-<\/script>\`;
+<\/script>`;
   if (/<\\/head\\s*>/i.test(html)) return html.replace(/<\\/head\\s*>/i, bridge + "</head>");
   if (/<body[^>]*>/i.test(html)) return html.replace(/<body([^>]*)>/i, "<body$1>" + bridge);
   return bridge + html;
