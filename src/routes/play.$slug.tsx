@@ -43,24 +43,28 @@ function injectScoreStorageBridge(html: string) {
   }
 
   function inspectValue(key, value) {
-    if (!keyRe.test(String(key))) return;
     if (value == null) return;
+    var keyLooksLikeScore = keyRe.test(String(key));
     if (typeof value === "string") {
       var direct = Number(value);
-      if (Number.isFinite(direct)) { emit(direct, key); return; }
+      if (keyLooksLikeScore && Number.isFinite(direct)) { emit(direct, key); return; }
       try { inspectObject(key, JSON.parse(value)); } catch (_) {}
       return;
     }
     inspectObject(key, value);
   }
 
-  function inspectObject(rootKey, obj) {
-    if (obj == null || typeof obj !== "object") return;
+  function inspectObject(rootKey, obj, depth) {
+    if (obj == null || typeof obj !== "object" || (depth || 0) > 3) return;
     var fields = ["score","highScore","high_score","bestScore","best_score","points","point","分數","最高分","得分"];
     for (var i = 0; i < fields.length; i++) {
       if (Object.prototype.hasOwnProperty.call(obj, fields[i])) {
         emit(obj[fields[i]], rootKey + "." + fields[i]);
       }
+    }
+    for (var k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      if (typeof obj[k] === "object" && obj[k] !== null) inspectObject(rootKey + "." + k, obj[k], (depth || 0) + 1);
     }
   }
 
@@ -541,7 +545,7 @@ function PlayGame() {
         ) : game.html_content ? (
           <iframe
             ref={iframeRef}
-            srcDoc={game.html_content}
+            srcDoc={injectScoreStorageBridge(game.html_content)}
             title={game.name}
             className="absolute inset-0 w-full h-full bg-white border-0"
             sandbox="allow-scripts allow-pointer-lock"
