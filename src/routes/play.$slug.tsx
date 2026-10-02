@@ -94,7 +94,7 @@ function injectScoreStorageBridge(html: string) {
   setTimeout(scan, 50);
 })();
 <\/script>`;
-  if (/<\\/head\\s*>/i.test(html)) return html.replace(/<\\/head\\s*>/i, bridge + "</head>");
+  if (/<\/head\s*>/i.test(html)) return html.replace(/<\/head\s*>/i, bridge + "</head>");
   if (/<body[^>]*>/i.test(html)) return html.replace(/<body([^>]*)>/i, "<body$1>" + bridge);
   return bridge + html;
 }
